@@ -50,7 +50,7 @@ The following libraries are used for data manipulation, visualization, and ordin
 * patchwork allows combining multiple ggplots into composite figures.
 * vegan is used for ecological distance metrics and ordination.
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 library(tidyverse)
 library(ggh4x)
 library(ggrepel)
@@ -81,13 +81,12 @@ datetime <- params$datetime
 dir.create(paste0("plots/", datetime), recursive = TRUE, showWarnings = FALSE)
 
 all_dates <- df %>%
-  filter(control_type != "Extraction_Positive") %>%
+  filter(grepl(control_type, pattern = "Negative") & !is.na(control_date)) %>%
   distinct(control_type, control_date)
 
-df_filt <- df %>%
+df_filt <- df %>% filter(grepl(control_type, pattern = "Negative")) %>%
   filter(
-    control_type != "Extraction_Positive",
-    
+
     (
       pipeline != "PREFILTER" &
       rank == eukaryote_rank &
@@ -130,6 +129,7 @@ total_lib <- all_dates %>%
   filter(control_type == "Library_Negative") %>% pull() %>% length
   
 p <- all_dates %>%
+  filter(!is.na(control_date)) %>%
   mutate(month = format(control_date, "%Y-%m")) %>%
   group_by(month, control_type) %>%
   summarise(n_libraries = n(), .groups = "drop") %>%
@@ -151,20 +151,22 @@ Values are displayed on a logarithmic scale to accommodate the wide range of rea
 Faceting by control type allows comparison between different types of laboratory controls.
 
 ```{r plot_total_contamination}
-p <- df %>%
-  filter(rank == "order" & control_type != "Extraction_Positive") %>% 
+plot_df <- df %>%
+  filter(rank == "order") %>% 
   group_by(control_date, pipeline, control_type) %>%
   summarise(total_reads = sum(nreads), .groups = "drop") %>%
-  
   right_join(all_dates, by = c("control_type","control_date")) %>%
-  
   tidyr::complete(control_type, control_date, pipeline,
                   fill = list(total_reads = 0)) %>%
-  
-  ggplot(aes(control_date, total_reads, colour = pipeline)) +
+  filter(grepl("Negative", control_type))
+
+
+df_lines <- plot_df %>% filter(!is.na(pipeline))
+p <- ggplot(df_lines, aes(control_date, total_reads, colour = pipeline)) +
   geom_point(size = 3) +
   geom_line(linewidth = 1) +
-  facet_wrap(~control_type, scales = "free_x") +
+
+  facet_grid(pipeline ~ control_type, scales = "free_x") +
   scale_x_date(date_labels = "%Y-%m") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(
@@ -229,7 +231,8 @@ Color intensity represents the logarithm of the number of reads assigned to that
 
 In plants we just use the top 50 genera by total read count to keep the visualization interpretable.
 
-```{r plot_plant_genus_heatmap, fig.width=12, fig.height=12}
+```{r plot_plant_genus_heatmap, fig.width=16, fig.height=12}
+
 top_genera <- df_filt %>%
   filter(kingdom == "Plant") %>%
   group_by(name) %>%
@@ -277,7 +280,8 @@ This heatmap displays animal taxa detected in control libraries.
 Similar to the plant heatmap, each tile shows the abundance of reads assigned to a particular genus at a given control date.
 
 We have the same 50 taxa limit for animals, though probably not needed.
-```{r plot_animal_genus_heatmap}
+```{r plot_animal_genus_heatmap, fig.width=16, fig.height=12}
+
 
 top_genera <- df_filt %>%
   filter(kingdom == "Animal") %>%
@@ -319,7 +323,8 @@ print(p)
 This heatmap shows eukaryotic taxa that are neither classified as plants nor animals. 
 These may include fungi, protists, or other eukaryotic microorganisms.
 
-```{r plot_other_eukaryote_genus_heatmap}
+```{r plot_other_eukaryote_genus_heatmap, fig.width=16, fig.height=12}
+
 
 top_genera <- df_filt %>%
   filter(kingdom == "Other_Euk") %>%
@@ -361,7 +366,7 @@ print(p)
 Bacterial assignments are far more numerous and diverse than eukaryotic taxa. 
 To keep the visualization interpretable, only the top 20 bacterial orders by total read count are displayed.
 
-```{r plot_bacteria_order_heatmap, fig.width=12, fig.height=12}
+```{r plot_bacteria_order_heatmap, fig.width=16, fig.height=12}
 
 top_orders <- df_filt %>% filter(kingdom == "Microbe") %>%
   group_by(name) %>%
@@ -416,9 +421,9 @@ dummy_data <- valid_combinations %>%
   mutate(nreads = NA_real_)
 
 # Combine with actual data
-df_plot <- df_filt %>%
+df_plot <- df_filt %>% 
   mutate(month = format(control_date, "%Y-%m")) %>%
-  bind_rows(dummy_data)
+  bind_rows(dummy_data) 
 
 p <- ggplot(df_plot, aes(month, nreads, fill = kingdom)) +
   geom_boxplot(outlier.alpha = 0.2) +

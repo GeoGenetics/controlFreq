@@ -71,6 +71,9 @@ controls <- smdb %>%
 
 controls <- controls %>% filter(!is.na(library_id)) %>% distinct()
 
+#name_controls <- paste0("smdb/control_", datetime, ".tsv")
+#write_tsv(controls, name_controls)
+
 
 # ----- Find library results paths for controls -----
 
@@ -79,14 +82,16 @@ res_tsv <- system2(
   args = controls$library_id,
   stdout = TRUE
 )
-res_df <- read_tsv(
-  paste(res_tsv, collapse = "\n"),
-  show_col_types = FALSE
-) %>% distinct()
+res_df <- if (length(res_tsv) == 0) {
+  tibble()
+} else {
+  read_tsv(paste(res_tsv, collapse = "\n"), show_col_types = FALSE)
+} %>% distinct()
 
 df <- controls %>% left_join(res_df, by = c("library_id" = "library"))
 
-df <- df %>% filter(!is.na(results_path) & results_wf != "ARCHIVE")
+df <- df %>%
+  filter(results_wf != "ARCHIVE" | is.na(results_wf))
 
 # ----- Get euk results  
 
@@ -105,6 +110,9 @@ df <- df %>%
 stat_data <- pmap_dfr(
   list(df$stat_path, df$library_id, df$results_path),
   function(stat_path, library_id, results_path) {
+    if (!file.exists(stat_path)) {
+      return(tibble())
+    }
     
     read_tsv(
       stat_path,
@@ -137,6 +145,9 @@ df <- df %>%
 prefilter_data <- pmap_dfr(
   list(df$prefilter_path, df$library_id, df$results_path),
   function(prefilter_path, library_id, results_path) {
+    if (!file.exists(prefilter_path)) {
+      return(tibble())
+    }
     
     read_tsv(
       prefilter_path,
@@ -155,10 +166,17 @@ prefilter_data$pipeline <- "PREFILTER"
 
 # ----- Join results with controls
 
+
 final_data <- bind_rows(stat_data, prefilter_data)
 
-df_final <- final_data %>% select(-prefilter_path, -stat_path) %>%
-  left_join(df,by=c(library_id="library_id", results_path="results_path")) 
+df_final <- df %>%
+  left_join(final_data, by = c("library_id", "results_path"))
+
+df_final <- df_final %>%
+  mutate(
+    has_stat = !is.na(nreads),
+    empty_control = is.na(nreads)
+  )  
 
 # remove columns called fw* or bw*
 df_final <- df_final %>% select(-matches("^(fw|bw)")) 
