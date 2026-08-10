@@ -77,12 +77,18 @@ Run the pipeline using the main script:
 
 `bash scripts/main.sh`
 
+Add `--push` to also commit `public/dashboard-data.json` and push it to the
+current branch on the `origin` remote:
+
+`bash scripts/main.sh --push`
+
 This will:
 
 1. Download the SMDB
 2. Extract control libraries
 3. Get metaDMG results
 4. Generate the contamination report
+5. Refresh `public/dashboard-data.json` for the React dashboard
 
 ## Dependencies
 ### R packages
