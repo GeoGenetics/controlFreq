@@ -1,53 +1,212 @@
 #!/usr/bin/env python3
 """Stream a controlFreq TSV into a compact JSON file for the React dashboard."""
 
-import argparse, csv, json
+import argparse
+import csv
+import json
+import math
+import statistics
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+
 def classify(row):
-    if row["pipeline"] == "PREFILTER": return "Microbe"
-    if "Metazoa" in row["taxa_path"]: return "Animal"
-    if "Viridiplantae" in row["taxa_path"]: return "Plant"
+    if row["pipeline"] == "PREFILTER":
+        return "Microbe"
+    if "Metazoa" in row["taxa_path"]:
+        return "Animal"
+    if "Viridiplantae" in row["taxa_path"]:
+        return "Plant"
     return "Other Eukaryote"
+
+
+def number(value):
+    try:
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else None
+    except (TypeError, ValueError):
+        return None
+
+
+def anomaly_baseline(values):
+    """Return a robust upper limit based on median + 3 scaled MAD."""
+    median = statistics.median(values)
+    deviations = [abs(value - median) for value in values]
+    mad = statistics.median(deviations)
+    threshold = median + 3 * 1.4826 * mad
+    if mad == 0:
+        threshold = max(median * 2, median + 1)
+    return median, threshold
+
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
     parser.add_argument("--output", type=Path, default=Path("public/dashboard-data.json"))
     args = parser.parse_args()
-    reads_by_group, libraries_by_group = defaultdict(int), defaultdict(set)
-    taxa_reads, taxa_months = defaultdict(int), defaultdict(lambda: defaultdict(int))
+
+    reads_by_group = defaultdict(int)
+    libraries_by_group = defaultdict(set)
+    taxon_groups = defaultdict(
+        lambda: {"reads": 0, "libraries": set(), "aSum": 0.0, "aReads": 0}
+    )
+    library_groups = defaultdict(
+        lambda: {"reads": 0, "topTaxon": "", "topReads": 0}
+    )
+    taxa_reads = defaultdict(int)
+    taxa_months = defaultdict(lambda: defaultdict(int))
+
     with args.input.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle, delimiter="\t"):
-            ctype, date = row.get("control_type", ""), row.get("control_date", "")
-            if "Negative" not in ctype or not date or date == "NA": continue
-            pipeline, path = row.get("pipeline", ""), row.get("taxa_path", "")
-            try: reads = int(float(row.get("nreads", "0")))
-            except (TypeError, ValueError): continue
-            if row.get("rank") != "genus" or reads <= 49: continue
-            if pipeline == "PREFILTER" and "Bacteria" not in path: continue
-            month, kingdom = date[:7], classify(row)
-            key = (month, ctype.replace("_", " "), kingdom, pipeline)
+            ctype = row.get("control_type", "")
+            date = row.get("control_date", "")
+            if "Negative" not in ctype or not date or date == "NA":
+                continue
+
+            pipeline = row.get("pipeline", "")
+            path = row.get("taxa_path", "")
+            parsed_reads = number(row.get("nreads"))
+            if parsed_reads is None:
+                continue
+            reads = int(parsed_reads)
+            if row.get("rank") != "genus" or reads <= 49:
+                continue
+            if pipeline == "PREFILTER" and "Bacteria" not in path:
+                continue
+
+            month = date[:7]
+            kingdom = classify(row)
+            control_type = ctype.replace("_", " ")
+            library_id = row.get("library_id", "")
+            taxon = row.get("name") or "Unknown"
+            key = (month, control_type, kingdom, pipeline)
+
             reads_by_group[key] += reads
-            libraries_by_group[key].add(row.get("library_id", ""))
-            taxon_key = (row.get("name") or "Unknown", kingdom)
+            libraries_by_group[key].add(library_id)
+
+            taxon_group = taxon_groups[
+                (month, control_type, kingdom, pipeline, taxon)
+            ]
+            taxon_group["reads"] += reads
+            taxon_group["libraries"].add(library_id)
+            damage = number(row.get("A"))
+            if damage is not None:
+                taxon_group["aSum"] += damage * reads
+                taxon_group["aReads"] += reads
+
+            library_group = library_groups[
+                (library_id, month, control_type, kingdom, pipeline)
+            ]
+            library_group["reads"] += reads
+            if reads > library_group["topReads"]:
+                library_group["topTaxon"] = taxon
+                library_group["topReads"] = reads
+
+            taxon_key = (taxon, kingdom)
             taxa_reads[taxon_key] += reads
             taxa_months[taxon_key][month] += reads
-    records = [{"month": k[0], "controlType": k[1], "kingdom": k[2], "pipeline": k[3],
-                "reads": reads, "libraries": len(libraries_by_group[k] - {""})}
-               for k, reads in sorted(reads_by_group.items())]
-    taxa = []
-    for (name, kingdom), reads in sorted(taxa_reads.items(), key=lambda x: x[1], reverse=True)[:30]:
-        values = [v for _, v in sorted(taxa_months[(name, kingdom)].items())]
-        previous, latest = (values[-2], values[-1]) if len(values) > 1 else (0, values[-1])
-        change = round((latest - previous) / previous * 100, 1) if previous else 0
-        taxa.append({"name": name, "kingdom": kingdom, "reads": reads, "change": change})
-    payload = {"generatedAt": datetime.now(timezone.utc).isoformat(), "source": args.input.name,
-               "records": records, "taxa": taxa}
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
-    print(f"Wrote {len(records)} observations and {len(taxa)} taxa to {args.output}")
 
-if __name__ == "__main__": main()
+    records = [
+        {
+            "month": key[0],
+            "controlType": key[1],
+            "kingdom": key[2],
+            "pipeline": key[3],
+            "reads": reads,
+            "libraries": len(libraries_by_group[key] - {""}),
+        }
+        for key, reads in sorted(reads_by_group.items())
+    ]
+
+    taxon_records = []
+    for key, values in sorted(taxon_groups.items()):
+        mean_a = (
+            round(values["aSum"] / values["aReads"], 4)
+            if values["aReads"]
+            else None
+        )
+        taxon_records.append(
+            {
+                "month": key[0],
+                "controlType": key[1],
+                "kingdom": key[2],
+                "pipeline": key[3],
+                "name": key[4],
+                "reads": values["reads"],
+                "libraries": len(values["libraries"] - {""}),
+                "meanA": mean_a,
+            }
+        )
+
+    baseline_values = defaultdict(list)
+    for key, values in library_groups.items():
+        if key[0]:
+            baseline_values[(key[2], key[3], key[4])].append(values["reads"])
+    baselines = {
+        key: anomaly_baseline(values)
+        for key, values in baseline_values.items()
+        if len(values) >= 4
+    }
+
+    library_warnings = []
+    for key, values in sorted(library_groups.items()):
+        baseline_key = (key[2], key[3], key[4])
+        if not key[0] or baseline_key not in baselines:
+            continue
+        median, threshold = baselines[baseline_key]
+        if values["reads"] <= threshold:
+            continue
+        library_warnings.append(
+            {
+                "libraryId": key[0],
+                "month": key[1],
+                "controlType": key[2],
+                "kingdom": key[3],
+                "pipeline": key[4],
+                "reads": values["reads"],
+                "baseline": round(median),
+                "threshold": round(threshold),
+                "fold": round(values["reads"] / median, 1) if median else None,
+                "topTaxon": values["topTaxon"],
+            }
+        )
+
+    taxa = []
+    ranked_taxa = sorted(taxa_reads.items(), key=lambda item: item[1], reverse=True)
+    for (name, kingdom), reads in ranked_taxa[:30]:
+        values = [value for _, value in sorted(taxa_months[(name, kingdom)].items())]
+        previous, latest = (
+            (values[-2], values[-1]) if len(values) > 1 else (0, values[-1])
+        )
+        change = round((latest - previous) / previous * 100, 1) if previous else 0
+        taxa.append(
+            {"name": name, "kingdom": kingdom, "reads": reads, "change": change}
+        )
+
+    payload = {
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "source": args.input.name,
+        "records": records,
+        "taxa": taxa,
+        "taxonRecords": taxon_records,
+        "libraryWarnings": sorted(
+            library_warnings, key=lambda row: row["reads"], reverse=True
+        ),
+        "warningMethod": (
+            "Above median + 3 scaled MAD within control type, kingdom and "
+            "pipeline (minimum 4 libraries)."
+        ),
+    }
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(payload, separators=(",", ":")), encoding="utf-8"
+    )
+    print(
+        f"Wrote {len(records)} observations, {len(taxon_records)} taxon groups, "
+        f"and {len(library_warnings)} library warnings to {args.output}"
+    )
+
+
+if __name__ == "__main__":
+    main()
