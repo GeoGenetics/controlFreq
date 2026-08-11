@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Activity, AlertTriangle, ChevronDown, Database, Download,
-  FlaskConical, LayoutDashboard, Network, RotateCcw, Search,
+  ChartScatter, FlaskConical, LayoutDashboard, Network, RotateCcw, Search,
   SlidersHorizontal, Sparkles, TrendingDown, TrendingUp,
 } from 'lucide-react'
 import {
@@ -10,6 +10,8 @@ import {
 } from 'recharts'
 import { fallbackData } from './data.js'
 import LibraryExplorer from "./LibraryExplorer.jsx"
+import PcoaExplorer from "./PcoaExplorer.jsx"
+import PeakLibraries from "./PeakLibraries.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -48,6 +50,7 @@ function App() {
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedLibrary, setSelectedLibrary] = useState("")
+  const [peakMonth, setPeakMonth] = useState("")
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
@@ -168,6 +171,7 @@ function App() {
           <small>WORKSPACE</small>
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
           <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
+          <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => setActiveTab("pcoa")}><ChartScatter size={18} />PCoA</button>
           {activeTab === "overview" && <>
             <small>SECTIONS</small>
             <a href="#trends"><Activity size={18} />Contamination</a>
@@ -211,8 +215,8 @@ function App() {
 
         <section className="chart-grid" id="trends">
           <article className="panel trend-panel">
-            <div className="panel-head"><div><span className="kicker">READ VOLUME</span><h2>Contamination over time</h2><p>Monthly reads after all filters</p></div><div className="legend">{dimensions.kingdoms.map((item) => <span key={item}><i style={{ background: COLORS[item] }} />{item}</span>)}</div></div>
-            <div className="chart-area">{charts.timeline.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={charts.timeline} margin={{ top: 14, right: 8, left: -12, bottom: 0 }}><defs>{dimensions.kingdoms.map((item) => <linearGradient key={item} id={`fill-${item.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={COLORS[item]} stopOpacity=".28" /><stop offset="100%" stopColor={COLORS[item]} stopOpacity=".01" /></linearGradient>)}</defs><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={prettyDate} tickLine={false} axisLine={false} /><YAxis tickFormatter={formatNumber} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} />{dimensions.kingdoms.map((item) => <Area key={item} type="monotone" dataKey={item} stroke={COLORS[item]} strokeWidth={2} fill={`url(#fill-${item.replace(/\s/g, '')})`} connectNulls />)}</AreaChart></ResponsiveContainer> : <EmptyState />}</div>
+            <div className="panel-head"><div><span className="kicker">READ VOLUME</span><h2>Contamination over time</h2><p>Monthly reads after all filters · click a month for its libraries</p></div><div className="legend">{dimensions.kingdoms.map((item) => <span key={item}><i style={{ background: COLORS[item] }} />{item}</span>)}</div></div>
+            <div className="chart-area">{charts.timeline.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={charts.timeline} margin={{ top: 14, right: 8, left: -12, bottom: 0 }} onClick={(state) => state?.activeLabel && setPeakMonth(state.activeLabel)} className="clickable-chart"><defs>{dimensions.kingdoms.map((item) => <linearGradient key={item} id={`fill-${item.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={COLORS[item]} stopOpacity=".28" /><stop offset="100%" stopColor={COLORS[item]} stopOpacity=".01" /></linearGradient>)}</defs><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={prettyDate} tickLine={false} axisLine={false} /><YAxis tickFormatter={formatNumber} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} />{dimensions.kingdoms.map((item) => <Area key={item} type="monotone" dataKey={item} stroke={COLORS[item]} strokeWidth={2} fill={`url(#fill-${item.replace(/\s/g, '')})`} connectNulls />)}</AreaChart></ResponsiveContainer> : <EmptyState />}</div>
           </article>
           <article className="panel composition-panel">
             <div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>Kingdom composition</h2><p>Share of selected reads</p></div></div>
@@ -244,7 +248,9 @@ function App() {
           </article>
         </section>
 
-        </> : <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />}
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} /> : <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />}
+
+        <PeakLibraries month={peakMonth} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={() => setPeakMonth("")} onOpenLibrary={(libraryId) => { setPeakMonth(""); setSelectedLibrary(libraryId); setActiveTab("library") }} />
 
         <footer><span><i /> Data source: {data.source}</span><span>Updated {new Date(data.generatedAt).toLocaleString()}</span></footer>
       </main>

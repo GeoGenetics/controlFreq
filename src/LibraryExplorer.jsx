@@ -50,6 +50,7 @@ function arcPath(inner, outer, start, end) {
 }
 
 function Sunburst({ tree, focusPath, onFocus }) {
+  const [hover, setHover] = useState(null)
   const focus = findNode(tree, focusPath)
   const arcs = []
   const walk = (node, start, end, depth, branch) => {
@@ -69,20 +70,22 @@ function Sunburst({ tree, focusPath, onFocus }) {
   const meanA = focus.aReads ? focus.aSum / focus.aReads : null
 
   return <div className="sunburst-wrap">
-    <svg className="sunburst" viewBox="0 0 520 500" role="img" aria-label={`Taxonomic hierarchy for ${focus.name}`}>
+    <svg className="sunburst" viewBox="0 0 520 500" role="img" aria-label={"Taxonomic hierarchy for " + focus.name} onMouseLeave={() => setHover(null)}>
       {arcs.map(({ node, start, end, depth, branch }) => <path
         key={node.path.join('>')}
         d={arcPath(72 + (depth - 1) * 39, 108 + (depth - 1) * 39, start + .25, end - .25)}
         fill={PALETTE[branch % PALETTE.length]}
         opacity={1 - (depth - 1) * .1}
         onClick={() => onFocus(node.path)}
+        onMouseMove={(event) => setHover({ node, x: event.clientX + 14, y: event.clientY + 14 })}
         className="sunburst-arc"
-      ><title>{node.name} · {node.reads.toLocaleString()} reads{node.aReads ? ` · mean A ${(node.aSum / node.aReads).toFixed(3)}` : ''}</title></path>)}
+      />)}
       <circle cx="260" cy="250" r="68" className="sunburst-core" />
       <text x="260" y="238" textAnchor="middle" className="sunburst-label">{focus.name}</text>
       <text x="260" y="260" textAnchor="middle" className="sunburst-value">{fmt(focus.reads)}</text>
       <text x="260" y="278" textAnchor="middle" className="sunburst-detail">{meanA === null ? 'No A value' : `mean A ${meanA.toFixed(3)}`}</text>
     </svg>
+    {hover && <div className="sunburst-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.path.join(" › ")}</span><div><strong>{hover.node.reads.toLocaleString()}</strong> reads · <strong>{(hover.node.reads / focus.reads * 100).toFixed(1)}%</strong> of view</div>{hover.node.aReads > 0 && <small>Mean A {(hover.node.aSum / hover.node.aReads).toFixed(3)}</small>}<em>Click to focus</em></div>}
     <p className="sunburst-hint">Select a segment to focus · use the breadcrumb to move back</p>
   </div>
 }
