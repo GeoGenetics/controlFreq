@@ -4,6 +4,7 @@ import {
   CartesianGrid, Cell, ResponsiveContainer, Scatter, ScatterChart,
   Tooltip, XAxis, YAxis, ZAxis,
 } from 'recharts'
+import PageGuide from './PageGuide.jsx'
 
 const CONTROL_COLORS = {
   'Extraction Negative': '#20a97b',
@@ -131,6 +132,12 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
       <div><span className="kicker">LIBRARY SIMILARITY</span><h1>PCoA ordination</h1><p>Bray–Curtis distances calculated from relative genus abundance.</p></div>
       <div className="pcoa-key">{controlTypes.map((item) => <span key={item}><i style={{ background: colorFor(item) }} />{item}</span>)}<span><i className="warning-ring" />Warning</span></div>
     </div>
+
+    <PageGuide items={[
+      { title: 'Each dot is a library', text: 'Dots that sit close together have more similar relative taxon profiles. Dots far apart have more different profiles.' },
+      { title: 'Axes summarize differences', text: 'PCoA 1 and PCoA 2 are calculated directions, not measured variables. The percentages show how much of the between-library variation each direction captures.' },
+      { title: 'Use it to find clusters and outliers', text: 'Colours identify control types and red outlines mark warnings. Click a dot to inspect that library, and use filters to test whether the pattern remains.' },
+    ]} />
 
     <div className="panel explorer-filters pcoa-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />

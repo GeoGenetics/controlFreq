@@ -7,6 +7,7 @@ import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine,
   ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis,
 } from 'recharts'
+import PageGuide from './PageGuide.jsx'
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -96,6 +97,11 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
 
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">TAXA LANDSCAPE</span><h1>Prevalence vs abundance</h1><p>Separate recurring background taxa from rare, high-volume signals.</p></div></div>
+    <PageGuide items={[
+      { title: 'Move right for more common taxa', text: 'Prevalence is the percentage of eligible libraries where a taxon was detected. A point near the right edge appears in many libraries.' },
+      { title: 'Move up for stronger signals', text: 'The vertical position is mean relative abundance when the taxon is present. Larger circles also represent more total assigned reads.' },
+      { title: 'Use the four regions', text: 'Upper-right taxa are both common and abundant; lower-right taxa are recurring low-level background. Click any point for its taxon history.' },
+    ]} />
     <div className="panel explorer-filters landscape-filters">
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
@@ -199,6 +205,11 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
       <div><span className="kicker">TAXON EXPLORER</span><h1>Taxon recurrence</h1><p>Follow one taxon across libraries, controls, and time.</p></div>
       <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => onSelectTaxon(event.target.value)} placeholder="Search taxon…" /><datalist id="taxon-explorer-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
     </div>
+    <PageGuide items={[
+      { title: 'Search one taxon', text: 'Choose a name to follow it across control libraries and months. The Wikipedia card is external background information, not part of your sequencing result.' },
+      { title: 'Read height and colour separately', text: 'Bar height is assigned reads for that month. Bar colour represents the read-weighted A value using the fixed low-to-high colour scale.' },
+      { title: 'Open the contributing libraries', text: 'The list on the right shows where the taxon was detected. Click a library to inspect its full Krona-style taxonomy.' },
+    ]} />
     <article className="panel taxon-wiki-card">
       {wiki.status === 'loading' ? <div className="taxon-wiki-state"><LoaderCircle className="spin" size={18} /><span>Looking up {taxon} on Wikipedia…</span></div>
         : wiki.status === 'ready' ? <>{wiki.image && <img src={wiki.image} alt="" />}<div className="taxon-wiki-copy"><span className="kicker">FROM WIKIPEDIA</span><h2>{wiki.title}</h2><p>{wiki.extract || 'Wikipedia has a page for this taxon, but no introductory summary was returned.'}</p><a href={wiki.url} target="_blank" rel="noreferrer">Read the Wikipedia article<ExternalLink size={12} /></a><small>External background information; verify taxonomy against your reference database.</small></div></>
@@ -290,6 +301,11 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
 
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">COMPARE LIBRARIES</span><h1>Profile comparison</h1><p>Compare relative taxon composition and damage side by side.</p></div></div>
+    <PageGuide items={[
+      { title: 'Choose library A and B', text: 'The same filters are applied to both libraries so the comparison stays fair. You can also fill these slots from Library Explorer.' },
+      { title: 'Read the distance', text: 'Bray–Curtis distance is near 0 for similar relative taxon profiles and approaches 1 as the profiles become more different.' },
+      { title: 'Compare each taxon', text: 'The paired bars show that taxon’s share in A and B. Click its name for the full taxon history, or click a library heading for its Krona view.' },
+    ]} />
     <div className="panel compare-controls">
       <label className="filter-field"><span>Library A</span><div className="select-wrap"><select value={left} onChange={(event) => onComparisonChange([event.target.value, right].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <span className="compare-vs"><GitCompareArrows size={18} />VS</span>
@@ -356,6 +372,11 @@ export function DamageExplorer({ records = [], onOpenTaxon }) {
 
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">DAMAGE / A</span><h1>Damage overview</h1><p>Explore read-weighted A estimates across taxa, libraries, and time.</p></div></div>
+    <PageGuide items={[
+      { title: 'A comes from the pipeline', text: 'This dashboard summarizes the A estimate already present in your data. Its biological interpretation depends on how your pipeline calculated it.' },
+      { title: 'Read the two plots', text: 'The distribution counts observations at different A values; the timeline shows the read-weighted mean A for each month.' },
+      { title: 'Check supporting evidence', text: 'Use minimum reads and minimum A to reduce weak observations. The table shows which taxa support the highest remaining values.' },
+    ]} />
     <div className="panel explorer-filters damage-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
@@ -430,6 +451,11 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
 
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">RUN / BATCH QC</span><h1>Operational contamination</h1><p>Compare contamination load and warning concentration across sequencing metadata.</p></div></div>
+    <PageGuide items={[
+      { title: 'Choose how to group libraries', text: 'Group by batch date, sequencing run, flowcell, machine, or project to look for operational patterns shared by several controls.' },
+      { title: 'Look for concentrated warnings', text: 'A group with many flagged libraries may deserve review, especially when the same leading taxon appears repeatedly.' },
+      { title: 'Drill down before concluding', text: 'Select a group to list its libraries, then open individual libraries for taxonomy. Group patterns are clues, not proof of a source.' },
+    ]} />
     <div className="panel explorer-filters run-filters">
       <label className="filter-field"><span>Group by</span><div className="select-wrap"><select value={groupField} onChange={(event) => { setGroupField(event.target.value); setSelectedGroup('') }}>{Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
@@ -546,6 +572,11 @@ export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
 
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">CO-OCCURRENCE</span><h1>Taxon association network</h1><p>Edges connect taxa repeatedly detected in the same control libraries.</p></div><div className="network-legend"><span><i className="thin" />Weaker Jaccard</span><span><i className="thick" />Stronger Jaccard</span></div></div>
+    <PageGuide items={[
+      { title: 'Circles are taxa', text: 'Larger circles occur in more libraries. Click a circle—or a name in the pair list—to open that taxon in Taxon Explorer.' },
+      { title: 'Lines mean repeated co-presence', text: 'A thicker line means the two taxa share a larger fraction of their libraries, measured with Jaccard similarity.' },
+      { title: 'Association is not interaction', text: 'Taxa can appear together because of shared reagents, environments, or broad prevalence. This network does not prove a biological relationship.' },
+    ]} />
     <div className="panel explorer-filters network-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ChevronDown, CornerUpLeft, GitCompareArrows, Search, Sparkles, X } from 'lucide-react'
+import PageGuide from './PageGuide.jsx'
 
 const PALETTE = ['#20b884', '#6d8ee8', '#f0ad3d', '#9b72d4', '#e06d5d', '#46a8b6', '#88b84c']
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
@@ -137,6 +138,12 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
         {matches.length > 0 && <div className="library-results">{matches.map((id) => <button key={id} onClick={() => chooseLibrary(id)}>{id}</button>)}</div>}
       </div>
     </div>
+
+    <PageGuide items={[
+      { title: 'Choose one library', text: 'Search for a library ID or arrive here by clicking a warning, chart drill-down, or PCoA point. Everything below then describes that single library.' },
+      { title: 'Explore the rings', text: 'Larger Krona segments contain more assigned reads. Click a segment to zoom into that branch; use the breadcrumb above the plot to move back up.' },
+      { title: 'Filter or compare', text: 'Read and A filters hide taxon observations that do not meet the threshold. Add the library to slot A or B when you want a direct profile comparison.' },
+    ]} />
 
     {!records.length ? <div className="panel explorer-empty"><Sparkles size={23} /><h2>Library taxonomy is not in this data file</h2><p>Rebuild dashboard-data.json with the updated builder to enable this view.</p></div>
       : !selectedLibrary ? <div className="panel explorer-empty"><Search size={23} /><h2>Choose a library to explore</h2><p>Search by library ID, or open one directly from the warnings on Overview.</p></div>

@@ -4,6 +4,11 @@ The dashboard is a Vite/React application that reads a compact summary of a cont
 
 ## Dashboard features
 
+Navigation is grouped into Monitor, Libraries, Taxa, and Quality so related
+analyses stay together. Every main tab includes an open-by-default,
+plain-language guide explaining what the page compares, how to read its
+visuals, and where clicks lead; the guide can be collapsed at any time.
+
 The generated JSON retains monthly summaries by taxon, control type, kingdom,
 and pipeline, plus compact per-library genus lineages and run metadata. The
 dashboard filters these summaries by taxon, assigned reads, mean A, control,

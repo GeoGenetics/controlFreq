@@ -12,6 +12,7 @@ import { fallbackData } from './data.js'
 import LibraryExplorer from "./LibraryExplorer.jsx"
 import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
+import PageGuide from "./PageGuide.jsx"
 import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, PrevalenceExplorer, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
@@ -178,16 +179,19 @@ function App() {
       <aside className="sidebar">
         <a className="brand" href="#top"><span><FlaskConical size={21} /></span><b>controlFreq</b></a>
         <nav>
-          <small>WORKSPACE</small>
+          <small>MONITOR</small>
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
+          <small>LIBRARIES</small>
           <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
+          <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
           <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => setActiveTab("pcoa")}><ChartScatter size={18} />PCoA</button>
+          <small>TAXA</small>
           <button className={activeTab === "taxon" ? "active" : ""} onClick={() => setActiveTab("taxon")}><Search size={18} />Taxon explorer</button>
           <button className={activeTab === "prevalence" ? "active" : ""} onClick={() => setActiveTab("prevalence")}><ChartScatter size={18} />Taxa landscape</button>
-          <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
+          <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => setActiveTab("cooccurrence")}><Network size={18} />Co-occurrence</button>
+          <small>QUALITY</small>
           <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
-          <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => setActiveTab("cooccurrence")}><Network size={18} />Co-occurrence</button>
           {activeTab === "overview" && <>
             <small>SECTIONS</small>
             <a href="#trends"><Activity size={18} />Contamination</a>
@@ -204,6 +208,12 @@ function App() {
           <div><div className="eyebrow"><span /> LAB MONITORING</div><h1>Contamination overview</h1><p>Track recurring taxa and changes across negative controls.</p></div>
           <div className="top-actions"><button className="secondary" onClick={exportCsv}><Download size={16} />Export data</button></div>
         </header>
+
+        <PageGuide items={[
+          { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Leave them at All for the full dataset, or change one at a time to understand its effect.' },
+          { title: 'Read the patterns', text: 'The timeline shows when read volume changes; the heatmap shows which taxa drive those changes. Click either view to see the contributing libraries.' },
+          { title: 'Treat warnings as review flags', text: 'A warning means a library is unusually high compared with similar controls. It does not by itself identify the source or prove a failed run.' },
+        ]} />
 
         <section className="filter-panel" id="filters">
           <div className="filter-title"><SlidersHorizontal size={17} /><b>Filter data</b><span>{filtered.length} taxon-month observations</span></div>
