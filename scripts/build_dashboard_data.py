@@ -40,6 +40,27 @@ def anomaly_baseline(values):
     return median, threshold
 
 
+def compact_lineage(path, kingdom, taxon):
+    """Return a small, root-to-leaf lineage suitable for the dashboard."""
+    wanted = {"phylum", "class", "order", "family", "genus"}
+    lineage = [kingdom]
+    parsed = []
+    for part in path.split(";"):
+        fields = part.replace('""', '"').split(":", 2)
+        if len(fields) != 3:
+            continue
+        name = fields[1].strip('"')
+        rank = fields[2].strip('"')
+        if name and rank in wanted:
+            parsed.append((name, rank))
+    for name, _ in reversed(parsed):
+        if name not in lineage:
+            lineage.append(name)
+    if taxon not in lineage:
+        lineage.append(taxon)
+    return lineage
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
@@ -53,6 +74,9 @@ def main():
     )
     library_groups = defaultdict(
         lambda: {"reads": 0, "topTaxon": "", "topReads": 0}
+    )
+    library_taxon_groups = defaultdict(
+        lambda: {"reads": 0, "aSum": 0.0, "aReads": 0}
     )
     taxa_reads = defaultdict(int)
     taxa_months = defaultdict(lambda: defaultdict(int))
@@ -102,6 +126,24 @@ def main():
             if reads > library_group["topReads"]:
                 library_group["topTaxon"] = taxon
                 library_group["topReads"] = reads
+
+            if library_id:
+                lineage = compact_lineage(path, kingdom, taxon)
+                library_taxon = library_taxon_groups[
+                    (
+                        library_id,
+                        month,
+                        control_type,
+                        kingdom,
+                        pipeline,
+                        taxon,
+                        "|".join(lineage),
+                    )
+                ]
+                library_taxon["reads"] += reads
+                if damage is not None:
+                    library_taxon["aSum"] += damage * reads
+                    library_taxon["aReads"] += reads
 
             taxon_key = (taxon, kingdom)
             taxa_reads[taxon_key] += reads
@@ -172,6 +214,26 @@ def main():
             }
         )
 
+    library_taxon_records = []
+    for key, values in sorted(library_taxon_groups.items()):
+        library_taxon_records.append(
+            {
+                "libraryId": key[0],
+                "month": key[1],
+                "controlType": key[2],
+                "kingdom": key[3],
+                "pipeline": key[4],
+                "name": key[5],
+                "path": key[6],
+                "reads": values["reads"],
+                "meanA": (
+                    round(values["aSum"] / values["aReads"], 4)
+                    if values["aReads"]
+                    else None
+                ),
+            }
+        )
+
     taxa = []
     ranked_taxa = sorted(taxa_reads.items(), key=lambda item: item[1], reverse=True)
     for (name, kingdom), reads in ranked_taxa[:30]:
@@ -190,6 +252,7 @@ def main():
         "records": records,
         "taxa": taxa,
         "taxonRecords": taxon_records,
+        "libraryTaxonRecords": library_taxon_records,
         "libraryWarnings": sorted(
             library_warnings, key=lambda row: row["reads"], reverse=True
         ),
@@ -204,7 +267,8 @@ def main():
     )
     print(
         f"Wrote {len(records)} observations, {len(taxon_records)} taxon groups, "
-        f"and {len(library_warnings)} library warnings to {args.output}"
+        f"{len(library_taxon_records)} library taxa, and "
+        f"{len(library_warnings)} library warnings to {args.output}"
     )
 
 

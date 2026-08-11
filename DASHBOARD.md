@@ -5,7 +5,10 @@ The dashboard is a Vite/React application that reads a compact summary of a cont
 ## Dashboard features
 
 The generated JSON retains monthly summaries by taxon, control type, kingdom,
-and pipeline. The dashboard can filter these summaries by taxon name, minimum
+and pipeline, plus compact per-library genus lineages for the Library explorer.
+Warning library IDs open that explorer directly. Its Krona-style hierarchy
+supports pipeline, kingdom, minimum nreads, and minimum A filters. The dashboard
+can filter these summaries by taxon name, minimum
 assigned reads, and minimum read-weighted mean `A`, as well as the original
 control, kingdom, pipeline, and date filters.
 

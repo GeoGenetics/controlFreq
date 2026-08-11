@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Activity, AlertTriangle, Bell, ChevronDown, Database, Download,
-  FlaskConical, LayoutDashboard, RotateCcw, Search, Settings,
-  ShieldCheck, SlidersHorizontal, Sparkles, TrendingDown, TrendingUp,
+  Activity, AlertTriangle, ChevronDown, Database, Download,
+  FlaskConical, LayoutDashboard, Network, RotateCcw, Search,
+  SlidersHorizontal, Sparkles, TrendingDown, TrendingUp,
 } from 'lucide-react'
 import {
   Area, AreaChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { fallbackData } from './data.js'
+import LibraryExplorer from "./LibraryExplorer.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -45,7 +46,8 @@ function App() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [query, setQuery] = useState('')
-  const [notice, setNotice] = useState(false)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [selectedLibrary, setSelectedLibrary] = useState("")
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}dashboard-data.json`)
@@ -164,23 +166,23 @@ function App() {
         <a className="brand" href="#top"><span><FlaskConical size={21} /></span><b>controlFreq</b></a>
         <nav>
           <small>WORKSPACE</small>
-          <a className="active" href="#overview"><LayoutDashboard size={18} />Overview</a>
-          <a href="#trends"><Activity size={18} />Contamination</a>
-          <a href="#heatmap"><Sparkles size={18} />Taxa heatmap</a>
-          <a href="#warnings"><AlertTriangle size={18} />Warnings</a>
-          <small>TOOLS</small>
-          <a href="#filters"><SlidersHorizontal size={18} />Filters</a>
-          <a href="#settings"><Settings size={18} />Settings</a>
+          <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
+          <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
+          {activeTab === "overview" && <>
+            <small>SECTIONS</small>
+            <a href="#trends"><Activity size={18} />Contamination</a>
+            <a href="#heatmap"><Sparkles size={18} />Taxa heatmap</a>
+            <a href="#warnings"><AlertTriangle size={18} />Warnings</a>
+            <a href="#filters"><SlidersHorizontal size={18} />Filters</a>
+          </>}
         </nav>
-        <div className="side-status"><span><ShieldCheck size={17} /></span><div><b>Pipeline healthy</b><small>Last run completed</small></div></div>
-        <div className="profile"><div>AR</div><span><b>Abigail Ramsøe</b><small>Laboratory team</small></span><ChevronDown size={15} /></div>
       </aside>
 
       <main id="top">
+        {activeTab === "overview" ? <>
         <header className="topbar">
           <div><div className="eyebrow"><span /> LAB MONITORING</div><h1>Contamination overview</h1><p>Track recurring taxa and changes across negative controls.</p></div>
-          <div className="top-actions"><button className="icon-button" onClick={() => setNotice(!notice)} aria-label="Warnings"><Bell size={19} />{flaggedLibraries > 0 && <i />}</button><button className="secondary" onClick={exportCsv}><Download size={16} />Export data</button></div>
-          {notice && <div className="notice"><b>{flaggedLibraries ? `${flaggedLibraries} flagged libraries` : 'No library warnings'}</b><span>{data.warningMethod || 'Regenerate dashboard data to calculate library warnings.'}</span></div>}
+          <div className="top-actions"><button className="secondary" onClick={exportCsv}><Download size={16} />Export data</button></div>
         </header>
 
         <section className="filter-panel" id="filters">
@@ -238,9 +240,11 @@ function App() {
           </article>
           <article className="panel warning-panel" id="warnings">
             <div className="panel-head"><div><span className="kicker">LIBRARY WARNINGS</span><h2>Higher than normal content</h2><p>{data.warningMethod || 'Available after rebuilding dashboard data'}</p></div><span className={`warning-count ${warnings.length ? 'active' : ''}`}>{warnings.length}</span></div>
-            <div className="warning-list">{warnings.slice(0, 12).map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><b>{item.libraryId}</b><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: {item.topTaxon || 'Unknown'}</small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
+            <div className="warning-list">{warnings.slice(0, 12).map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: {item.topTaxon || 'Unknown'}</small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
           </article>
         </section>
+
+        </> : <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />}
 
         <footer><span><i /> Data source: {data.source}</span><span>Updated {new Date(data.generatedAt).toLocaleString()}</span></footer>
       </main>
