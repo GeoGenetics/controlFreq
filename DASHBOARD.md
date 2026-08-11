@@ -21,13 +21,17 @@ a co-occurrence network based on library co-presence and Jaccard similarity.
 The Taxa Landscape tab plots prevalence across eligible libraries against mean
 relative abundance when detected. Point size represents total reads, filters
 cover control type, pipeline, kingdom, reads, and prevalence, and clicking a
-point opens Taxon Explorer.
+point opens Taxon Explorer. Taxon Explorer also loads an optional Wikipedia
+summary and image using the normalized taxon name, with clear external attribution.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
-log-scaled colour intensity. Library warnings use total genus-level reads and
+log-scaled colour intensity. Date headings open all matching libraries, taxon
+labels open Taxon Explorer, and populated cells open the matching month/taxon
+library list before drilling into the selected library's Krona view. Library warnings use total genus-level reads and
 flag values above the median plus three scaled median absolute deviations
 within each control type, kingdom, and pipeline group. At least four libraries
-are required to establish a baseline.
+are required to establish a baseline. Minimum mean A filtering is available on
+all analysis tabs where taxon-level A values can meaningfully restrict results.
 
 
 ## Refresh the data

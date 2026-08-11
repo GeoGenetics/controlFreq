@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowRight, ChevronDown, GitCompareArrows,
-  Search, ShieldAlert, TestTubes,
+  AlertTriangle, ArrowRight, ChevronDown, ExternalLink, GitCompareArrows,
+  LoaderCircle, Search, ShieldAlert, TestTubes,
 } from 'lucide-react'
 import {
   Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine,
@@ -46,6 +46,7 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
   const [kingdom, setKingdom] = useState('All')
   const [minReads, setMinReads] = useState('50')
   const [minPrevalence, setMinPrevalence] = useState('0')
+  const [minimumA, setMinimumA] = useState('')
   const dimensions = useMemo(() => ({
     controlTypes: [...new Set(records.map((row) => row.controlType))].sort(),
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
@@ -59,8 +60,10 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
     const libraryTotals = new Map()
     for (const row of baseRows) libraryTotals.set(row.libraryId, (libraryTotals.get(row.libraryId) || 0) + row.reads)
     const groups = new Map()
+    const aThreshold = minimumA === '' ? null : Number(minimumA)
     for (const row of baseRows) {
       if (kingdom !== 'All' && row.kingdom !== kingdom) continue
+      if (aThreshold !== null && (!Number.isFinite(aThreshold) || row.meanA === null || row.meanA < aThreshold)) continue
       const key = row.kingdom + '\u0000' + row.name
       const item = groups.get(key) || { name: row.name, kingdom: row.kingdom, reads: 0, aSum: 0, aReads: 0, libraries: new Map() }
       item.reads += row.reads
@@ -81,7 +84,7 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
     const abundanceValues = points.map((item) => item.logAbundance).sort((a, b) => a - b)
     const medianLogAbundance = abundanceValues.length ? abundanceValues[Math.floor(abundanceValues.length / 2)] : 0
     return { eligibleLibraries, points, medianLogAbundance }
-  }, [records, controlType, pipeline, kingdom, minReads, minPrevalence])
+  }, [records, controlType, pipeline, kingdom, minReads, minPrevalence, minimumA])
 
   const byKingdom = Object.fromEntries(dimensions.kingdoms.map((name) => [name, analysis.points.filter((item) => item.kingdom === name)]))
   const recurring = analysis.points.filter((item) => item.prevalence >= 50).length
@@ -99,6 +102,7 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum total reads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum prevalence (%)</span><input type="number" min="0" max="100" step="1" value={minPrevalence} onChange={(event) => setMinPrevalence(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Eligible libraries', value: analysis.eligibleLibraries, detail: 'Prevalence denominator' },
@@ -119,12 +123,35 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
   const [kingdom, setKingdom] = useState('All')
   const [minReads, setMinReads] = useState('')
   const [minA, setMinA] = useState('')
+  const [wiki, setWiki] = useState({ status: 'idle' })
 
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
     taxa: [...new Set(records.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
   }), [records])
+
+  useEffect(() => {
+    if (!taxon) { setWiki({ status: 'idle' }); return undefined }
+    const wikiTitle = taxon.replace(/^[a-z]__/, '').replaceAll('_', ' ').trim()
+    const controller = new AbortController()
+    setWiki({ status: 'loading' })
+    const params = new URLSearchParams({
+      action: 'query', format: 'json', origin: '*', redirects: '1',
+      prop: 'extracts|pageimages|info', titles: wikiTitle, exintro: '1',
+      explaintext: '1', inprop: 'url', pithumbsize: '320',
+    })
+    fetch('https://en.wikipedia.org/w/api.php?' + params, { signal: controller.signal })
+      .then((response) => { if (!response.ok) throw new Error('Wikipedia request failed'); return response.json() })
+      .then((payload) => {
+        const page = Object.values(payload.query?.pages || {}).find((item) => !('missing' in item))
+        if (!page) { setWiki({ status: 'missing' }); return }
+        setWiki({ status: 'ready', title: page.title, extract: page.extract?.trim() || '', url: page.fullurl, image: page.thumbnail?.source })
+      })
+      .catch((error) => { if (error.name !== 'AbortError') setWiki({ status: 'error' }) })
+    return () => controller.abort()
+  }, [taxon])
+
   useEffect(() => {
     if (!taxon && records.length) {
       const totals = new Map()
@@ -172,6 +199,13 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
       <div><span className="kicker">TAXON EXPLORER</span><h1>Taxon recurrence</h1><p>Follow one taxon across libraries, controls, and time.</p></div>
       <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => onSelectTaxon(event.target.value)} placeholder="Search taxon…" /><datalist id="taxon-explorer-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
     </div>
+    <article className="panel taxon-wiki-card">
+      {wiki.status === 'loading' ? <div className="taxon-wiki-state"><LoaderCircle className="spin" size={18} /><span>Looking up {taxon} on Wikipedia…</span></div>
+        : wiki.status === 'ready' ? <>{wiki.image && <img src={wiki.image} alt="" />}<div className="taxon-wiki-copy"><span className="kicker">FROM WIKIPEDIA</span><h2>{wiki.title}</h2><p>{wiki.extract || 'Wikipedia has a page for this taxon, but no introductory summary was returned.'}</p><a href={wiki.url} target="_blank" rel="noreferrer">Read the Wikipedia article<ExternalLink size={12} /></a><small>External background information; verify taxonomy against your reference database.</small></div></>
+        : wiki.status === 'missing' ? <div className="taxon-wiki-state"><span>No exact Wikipedia page was found for <b>{taxon}</b>.</span></div>
+        : wiki.status === 'error' ? <div className="taxon-wiki-state"><span>Wikipedia information is temporarily unavailable. Your dashboard data is unaffected.</span></div>
+        : <div className="taxon-wiki-state"><span>Choose a taxon to load background information.</span></div>}
+    </article>
     <div className="panel explorer-filters analysis-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
@@ -211,6 +245,7 @@ function summarizeLibrary(rows) {
 export function LibraryComparison({ records = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenTaxon, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
+  const [minimumA, setMinimumA] = useState('')
 
   const libraryIds = useMemo(() => {
     const totals = new Map()
@@ -233,8 +268,9 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
   }), [records])
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
-    (kingdom === 'All' || row.kingdom === kingdom)
-  ), [records, pipeline, kingdom])
+    (kingdom === 'All' || row.kingdom === kingdom) &&
+    (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
+  ), [records, pipeline, kingdom, minimumA])
   const leftSummary = summarizeLibrary(filtered.filter((row) => row.libraryId === left))
   const rightSummary = summarizeLibrary(filtered.filter((row) => row.libraryId === right))
   const names = new Set([...leftSummary.profile.keys(), ...rightSummary.profile.keys()])
@@ -260,6 +296,7 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
       <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => onComparisonChange([left, event.target.value].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Bray–Curtis distance', value: distance.toFixed(3), detail: distance < .25 ? 'Similar profiles' : distance < .6 ? 'Moderately different' : 'Strongly different' },
@@ -282,6 +319,7 @@ export function DamageExplorer({ records = [], onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minReads, setMinReads] = useState('50')
+  const [minimumA, setMinimumA] = useState('')
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
@@ -289,8 +327,9 @@ export function DamageExplorer({ records = [], onOpenTaxon }) {
   const rows = useMemo(() => records.filter((row) =>
     row.meanA !== null && row.reads >= (Number(minReads) || 0) &&
     (pipeline === 'All' || row.pipeline === pipeline) &&
-    (kingdom === 'All' || row.kingdom === kingdom)
-  ), [records, pipeline, kingdom, minReads])
+    (kingdom === 'All' || row.kingdom === kingdom) &&
+    (minimumA === '' || row.meanA >= Number(minimumA))
+  ), [records, pipeline, kingdom, minReads, minimumA])
   const analysis = useMemo(() => {
     const maxA = Math.max(.1, ...rows.map((row) => row.meanA))
     const ceiling = Math.ceil(maxA * 10) / 10
@@ -321,6 +360,7 @@ export function DamageExplorer({ records = [], onOpenTaxon }) {
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Mean A', value: weightedA === null ? '—' : weightedA.toFixed(3), detail: 'Read-weighted' },
@@ -347,6 +387,7 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
   const [groupField, setGroupField] = useState('date')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
+  const [minimumA, setMinimumA] = useState('')
   const [selectedGroup, setSelectedGroup] = useState('')
   const metaMap = useMemo(() => new Map(metadata.map((item) => [item.libraryId, item])), [metadata])
   const dimensions = useMemo(() => ({
@@ -356,8 +397,9 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
   const warningIds = useMemo(() => new Set(warnings.map((row) => row.libraryId)), [warnings])
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
-    (kingdom === 'All' || row.kingdom === kingdom)
-  ), [records, pipeline, kingdom])
+    (kingdom === 'All' || row.kingdom === kingdom) &&
+    (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
+  ), [records, pipeline, kingdom, minimumA])
   const groups = useMemo(() => {
     const result = new Map()
     for (const row of filtered) {
@@ -392,6 +434,7 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
       <label className="filter-field"><span>Group by</span><div className="select-wrap"><select value={groupField} onChange={(event) => { setGroupField(event.target.value); setSelectedGroup('') }}>{Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: groupLabels[groupField], value: groups.length, detail: 'Groups represented' },
@@ -485,6 +528,7 @@ function buildCooccurrence(rows, maxTaxa, minimumShared) {
 export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
+  const [minimumA, setMinimumA] = useState('')
   const [minimumShared, setMinimumShared] = useState('3')
   const [maxTaxa, setMaxTaxa] = useState('30')
   const [hover, setHover] = useState(null)
@@ -494,8 +538,9 @@ export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
   }), [records])
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
-    (kingdom === 'All' || row.kingdom === kingdom)
-  ), [records, pipeline, kingdom])
+    (kingdom === 'All' || row.kingdom === kingdom) &&
+    (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
+  ), [records, pipeline, kingdom, minimumA])
   const network = useMemo(() => buildCooccurrence(filtered, Number(maxTaxa), Math.max(1, Number(minimumShared) || 1)), [filtered, maxTaxa, minimumShared])
   const strongest = network.edges[0]
 
@@ -504,6 +549,7 @@ export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
     <div className="panel explorer-filters network-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum shared libraries</span><input type="number" min="1" max="50" value={minimumShared} onChange={(event) => setMinimumShared(event.target.value)} /></label>
       <label className="filter-field"><span>Most prevalent taxa</span><div className="select-wrap"><select value={maxTaxa} onChange={(event) => setMaxTaxa(event.target.value)}>{[20, 30, 40].map((value) => <option key={value} value={value}>Top {value}</option>)}</select><ChevronDown size={15} /></div></label>
     </div>

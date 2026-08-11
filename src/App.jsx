@@ -52,6 +52,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedLibrary, setSelectedLibrary] = useState("")
   const [peakMonth, setPeakMonth] = useState("")
+  const [peakTaxon, setPeakTaxon] = useState("")
   const [comparisonLibraries, setComparisonLibraries] = useState([])
   const [selectedTaxon, setSelectedTaxon] = useState("")
 
@@ -160,6 +161,8 @@ function App() {
   }
 
   const openTaxon = (taxonName) => { setSelectedTaxon(taxonName); setActiveTab("taxon"); window.scrollTo({ top: 0, behavior: "smooth" }) }
+  const openPeak = (month, taxonName = "") => { setPeakMonth(month); setPeakTaxon(taxonName) }
+  const closePeak = () => { setPeakMonth(""); setPeakTaxon("") }
   const addToComparison = (libraryId) => setComparisonLibraries((current) => current.includes(libraryId) ? current : current.length < 2 ? [...current, libraryId] : [current[1], libraryId])
   const removeFromComparison = (libraryId) => setComparisonLibraries((current) => current.filter((id) => id !== libraryId))
 
@@ -229,7 +232,7 @@ function App() {
         <section className="chart-grid" id="trends">
           <article className="panel trend-panel">
             <div className="panel-head"><div><span className="kicker">READ VOLUME</span><h2>Contamination over time</h2><p>Monthly reads after all filters · click a month for its libraries</p></div><div className="legend">{dimensions.kingdoms.map((item) => <span key={item}><i style={{ background: COLORS[item] }} />{item}</span>)}</div></div>
-            <div className="chart-area">{charts.timeline.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={charts.timeline} margin={{ top: 14, right: 8, left: -12, bottom: 0 }} onClick={(state) => state?.activeLabel && setPeakMonth(state.activeLabel)} className="clickable-chart"><defs>{dimensions.kingdoms.map((item) => <linearGradient key={item} id={`fill-${item.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={COLORS[item]} stopOpacity=".28" /><stop offset="100%" stopColor={COLORS[item]} stopOpacity=".01" /></linearGradient>)}</defs><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={prettyDate} tickLine={false} axisLine={false} /><YAxis tickFormatter={formatNumber} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} />{dimensions.kingdoms.map((item) => <Area key={item} type="monotone" dataKey={item} stroke={COLORS[item]} strokeWidth={2} fill={`url(#fill-${item.replace(/\s/g, '')})`} connectNulls />)}</AreaChart></ResponsiveContainer> : <EmptyState />}</div>
+            <div className="chart-area">{charts.timeline.length ? <ResponsiveContainer width="100%" height="100%"><AreaChart data={charts.timeline} margin={{ top: 14, right: 8, left: -12, bottom: 0 }} onClick={(state) => state?.activeLabel && openPeak(state.activeLabel)} className="clickable-chart"><defs>{dimensions.kingdoms.map((item) => <linearGradient key={item} id={`fill-${item.replace(/\s/g, '')}`} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={COLORS[item]} stopOpacity=".28" /><stop offset="100%" stopColor={COLORS[item]} stopOpacity=".01" /></linearGradient>)}</defs><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={prettyDate} tickLine={false} axisLine={false} /><YAxis tickFormatter={formatNumber} tickLine={false} axisLine={false} /><Tooltip content={<CustomTooltip />} />{dimensions.kingdoms.map((item) => <Area key={item} type="monotone" dataKey={item} stroke={COLORS[item]} strokeWidth={2} fill={`url(#fill-${item.replace(/\s/g, '')})`} connectNulls />)}</AreaChart></ResponsiveContainer> : <EmptyState />}</div>
           </article>
           <article className="panel composition-panel">
             <div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>Kingdom composition</h2><p>Share of selected reads</p></div></div>
@@ -240,12 +243,12 @@ function App() {
 
         <section className="panel heatmap-panel" id="heatmap">
           <div className="panel-head"><div><span className="kicker">TAXA x TIME</span><h2>Most abundant taxa over time</h2><p>Top 12 taxa after filtering; colour intensity uses log-scaled reads</p></div><div className="heat-legend"><span>Low</span><i /><i /><i /><i /><span>High</span></div></div>
-          <div className="heatmap-scroll">{heatmap.top.length ? <table className="heatmap-table"><thead><tr><th>Taxon</th>{heatmap.months.map((month) => <th key={month}>{prettyDate(month)}</th>)}</tr></thead><tbody>{heatmap.top.map((item) => {
+          <div className="heatmap-scroll">{heatmap.top.length ? <table className="heatmap-table"><thead><tr><th>Taxon</th>{heatmap.months.map((month) => <th key={month}><button className="heatmap-date" onClick={() => openPeak(month)} title={`Open libraries from ${prettyDate(month)}`}>{prettyDate(month)}</button></th>)}</tr></thead><tbody>{heatmap.top.map((item) => {
             const key = `${item.kingdom}\u0000${item.name}`
             return <tr key={key}><th><i style={{ background: COLORS[item.kingdom] }} /><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></th>{heatmap.months.map((month) => {
               const value = heatmap.values.get(`${key}\u0000${month}`) || 0
               const intensity = value && heatmap.max ? 0.12 + 0.88 * Math.log1p(value) / Math.log1p(heatmap.max) : 0
-              return <td key={month} title={`${item.name} - ${prettyDate(month)} - ${value.toLocaleString()} reads`}><span style={{ background: `rgba(26, 170, 117, ${intensity})` }}>{value ? formatNumber(value) : ''}</span></td>
+              return <td key={month} title={`${item.name} - ${prettyDate(month)} - ${value.toLocaleString()} reads`}>{value ? <button className="heatmap-cell" style={{ background: `rgba(26, 170, 117, ${intensity})` }} onClick={() => openPeak(month, item.name)} aria-label={`Open ${item.name} libraries from ${prettyDate(month)}`}>{formatNumber(value)}</button> : <span />}</td>
             })}</tr>
           })}</tbody></table> : <EmptyState />}</div>
         </section>
@@ -270,7 +273,7 @@ function App() {
           : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />}
 
-        <PeakLibraries month={peakMonth} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={() => setPeakMonth("")} onOpenLibrary={(libraryId) => { setPeakMonth(""); setSelectedLibrary(libraryId); setActiveTab("library") }} />
+        <PeakLibraries month={peakMonth} taxon={peakTaxon} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={closePeak} onOpenLibrary={(libraryId) => { closePeak(); setSelectedLibrary(libraryId); setActiveTab("library") }} />
 
         <footer><span><i /> Data source: {data.source}</span><span>Updated {new Date(data.generatedAt).toLocaleString()}</span></footer>
       </main>
