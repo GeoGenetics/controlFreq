@@ -99,7 +99,7 @@ def main():
             if parsed_reads is None:
                 continue
             reads = int(parsed_reads)
-            if row.get("rank") != "genus" or reads <= 49:
+            if row.get("rank") != "genus":
                 continue
             if pipeline == "PREFILTER" and "Bacteria" not in path:
                 continue
@@ -220,6 +220,7 @@ def main():
         library_warnings.append(
             {
                 "libraryId": key[0],
+                "date": library_metadata.get(key[0], {}).get("date", key[1]),
                 "month": key[1],
                 "controlType": key[2],
                 "kingdom": key[3],
@@ -273,7 +274,7 @@ def main():
         "libraryTaxonRecords": library_taxon_records,
         "libraryMetadata": [library_metadata[key] for key in sorted(library_metadata)],
         "libraryWarnings": sorted(
-            library_warnings, key=lambda row: row["reads"], reverse=True
+            library_warnings, key=lambda row: (row["date"], row["reads"]), reverse=True
         ),
         "warningMethod": (
             "Above median + 3 scaled MAD within control type, kingdom and "

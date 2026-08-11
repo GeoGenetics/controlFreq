@@ -143,7 +143,7 @@ function App() {
     (kingdom === 'All' || row.kingdom === kingdom) &&
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (!from || row.month >= from) && (!to || row.month <= to)
-  ), [data, controlType, kingdom, pipeline, from, to])
+  ).sort((a, b) => (b.date || b.month).localeCompare(a.date || a.month) || b.reads - a.reads), [data, controlType, kingdom, pipeline, from, to])
 
   const totalReads = filtered.reduce((sum, row) => sum + row.reads, 0)
   const libraryCount = Math.max(0, ...filtered.map((row) => row.libraries || 0))
@@ -279,7 +279,7 @@ function App() {
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
-          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
           : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />}

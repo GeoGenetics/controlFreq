@@ -15,8 +15,9 @@ dashboard filters these summaries by taxon, assigned reads, mean A, control,
 kingdom, pipeline, and date.
 
 Warning library IDs and monthly read-volume points open library drill-downs.
-Taxon names throughout the dashboard open Taxon Explorer. That view uses bar
-height for assigned reads and a fixed colour scale for read-weighted mean A.
+Taxon names throughout the dashboard open Taxon Explorer. Its recurrence chart
+uses side-by-side bars for extraction and library negatives; bar height is
+assigned reads and the fixed fill-colour scale represents read-weighted mean A.
 
 Library Explorer explains the warning baseline, provides a persistent two-slot
 comparison tray, and shows detailed lineage values on Krona hover. Internal
@@ -25,7 +26,8 @@ A Similar Libraries section ranks the eight nearest filtered profiles using
 100 × (1 − Bray–Curtis distance), with date, control type, shared taxa, warning
 status, and direct open/compare actions. The PCoA tab
 uses Bray-Curtis distances of relative genus abundance. Dedicated tabs provide
-taxon recurrence, library comparison, damage/A distributions, run/batch QC, and
+taxon recurrence, library comparison with exact control dates and types,
+damage/A distributions, run/batch QC, and
 a co-occurrence network based on library co-presence and Jaccard similarity.
 The Taxa Landscape tab plots prevalence across eligible libraries against mean
 relative abundance when detected. Point size represents total reads, filters
@@ -39,7 +41,8 @@ labels open Taxon Explorer, and populated cells open the matching month/taxon
 library list before drilling into the selected library's Krona view. Library warnings use total genus-level reads and
 flag values above the median plus three scaled median absolute deviations
 within each control type, kingdom, and pipeline group. At least four libraries
-are required to establish a baseline. Minimum mean A filtering is available on
+are required to establish a baseline, and warnings are shown newest-first.
+Minimum mean A filtering is available on
 all analysis tabs where taxon-level A values can meaningfully restrict results.
 
 
@@ -67,7 +70,7 @@ To rebuild only the dashboard data from an existing control table, run:
 python3 scripts/build_dashboard_data.py controls/control_20260619_105413.tsv
 ```
 
-This streams the large TSV and writes `public/dashboard-data.json`. Replace the input path with any newer control table.
+This streams the large TSV and writes `public/dashboard-data.json`. Replace the input path with any newer control table. The builder retains every genus-level negative-control observation with a numeric read count; it does not apply a minimum-read cutoff. Dashboard and CSV-export filters are applied interactively.
 
 ## Run locally
 

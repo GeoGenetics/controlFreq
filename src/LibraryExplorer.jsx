@@ -165,7 +165,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
   const tree = useMemo(() => buildTree(filtered), [filtered])
   const focused = findNode(tree, focusPath)
   const topTaxa = [...focused.children.values()].sort((a, b) => b.reads - a.reads).slice(0, 12)
-  const libraryWarnings = warnings.filter((row) => row.libraryId === selectedLibrary)
+  const libraryWarnings = warnings.filter((row) => row.libraryId === selectedLibrary).sort((a, b) => (b.date || b.month).localeCompare(a.date || a.month) || b.reads - a.reads)
   const meta = libraryRows[0]
 
   return <section className="library-explorer">

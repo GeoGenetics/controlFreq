@@ -13,6 +13,10 @@ const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
   'Other Eukaryote': '#b08cff',
 }
+const CONTROL_TYPE_STROKES = {
+  'Extraction Negative': '#147454',
+  'Library Negative': '#6659bd',
+}
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 const aColor = (value) => {
   if (value === null || value === undefined || !Number.isFinite(value)) return "#d8dfdc"
@@ -20,6 +24,7 @@ const aColor = (value) => {
   return `hsl(${210 - 190 * t} 72% ${72 - 22 * t}%)`
 }
 const monthLabel = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en', { month: 'short', year: '2-digit' })
+const dateLabel = (date) => new Date(`${date.length === 7 ? date + '-01' : date}T00:00:00`).toLocaleDateString('en', { day: 'numeric', month: 'short', year: 'numeric' })
 
 function FilterSelect({ label, value, options, onChange }) {
   return <label className="filter-field"><span>{label}</span><div className="select-wrap"><select value={value} onChange={(event) => onChange(event.target.value)}><option value="All">All {label.toLowerCase()}</option>{options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={15} /></div></label>
@@ -30,9 +35,13 @@ function MetricStrip({ items }) {
 }
 
 function TaxonATooltip({ active, payload, label }) {
-  const point = payload?.[0]?.payload
-  if (!active || !point) return null
-  return <div className="chart-tooltip"><b>{monthLabel(label)}</b><div>Reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? "—" : point.meanA.toFixed(3)}</span></div></div>
+  const entries = (payload || []).filter((item) => item.value > 0)
+  if (!active || !entries.length) return null
+  const point = entries[0].payload
+  return <div className="chart-tooltip recurrence-tooltip"><b>{monthLabel(label)}</b>{entries.map((item) => {
+    const control = point.controls[item.name]
+    return <div key={item.name}><i style={{ background: aColor(control.meanA), borderColor: CONTROL_TYPE_STROKES[item.name] || '#65756d' }} />{item.name}<span>{control.reads.toLocaleString()} reads · A {control.meanA === null ? '—' : control.meanA.toFixed(3)}</span></div>
+  })}</div>
 }
 
 function PrevalenceTooltip({ active, payload }) {
@@ -181,6 +190,7 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
   const summary = useMemo(() => {
     const libraries = new Map()
     const months = new Map()
+    const controlTypes = new Set()
     let reads = 0; let aSum = 0; let aReads = 0
     for (const row of rows) {
       reads += row.reads
@@ -188,15 +198,22 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
       library.reads += row.reads
       if (row.meanA !== null) { aSum += row.meanA * row.reads; aReads += row.reads; library.aSum += row.meanA * row.reads; library.aReads += row.reads }
       libraries.set(row.libraryId, library)
-      const point = months.get(row.month) || { month: row.month, reads: 0, aSum: 0, aReads: 0 }
-      point.reads += row.reads
-      if (row.meanA !== null) { point.aSum += row.meanA * row.reads; point.aReads += row.reads }
+      controlTypes.add(row.controlType)
+      const point = months.get(row.month) || { month: row.month, controls: {} }
+      const control = point.controls[row.controlType] || { reads: 0, aSum: 0, aReads: 0 }
+      control.reads += row.reads
+      if (row.meanA !== null) { control.aSum += row.meanA * row.reads; control.aReads += row.reads }
+      point.controls[row.controlType] = control
       months.set(row.month, point)
     }
     return {
       reads, meanA: aReads ? aSum / aReads : null,
       libraries: [...libraries.values()].sort((a, b) => b.reads - a.reads),
-      timeline: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)).map((item) => ({ ...item, meanA: item.aReads ? item.aSum / item.aReads : null })),
+      controlTypes: [...controlTypes].sort(),
+      timeline: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)).map((item) => ({
+        ...item,
+        controls: Object.fromEntries(Object.entries(item.controls).map(([name, control]) => [name, { ...control, meanA: control.aReads ? control.aSum / control.aReads : null }])),
+      })),
     }
   }, [rows])
 
@@ -207,7 +224,7 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
     </div>
     <PageGuide items={[
       { title: 'Search one taxon', text: 'Choose a name to follow it across control libraries and months. The Wikipedia card is external background information, not part of your sequencing result.' },
-      { title: 'Read height and colour separately', text: 'Bar height is assigned reads for that month. Bar colour represents the read-weighted A value using the fixed low-to-high colour scale.' },
+      { title: 'Compare the control types', text: 'Each month has separate bars for extraction negatives and library negatives. Bar height is assigned reads, while fill colour represents read-weighted A.' },
       { title: 'Open the contributing libraries', text: 'The list on the right shows where the taxon was detected. Click a library to inspect its full Krona-style taxonomy.' },
     ]} />
     <article className="panel taxon-wiki-card">
@@ -231,8 +248,8 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
     ]} />
     <div className="analysis-grid">
       <article className="panel analysis-chart-panel">
-        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Bar height is reads; colour encodes monthly mean A</p></div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div>
-        {summary.timeline.length ? <div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} /><Bar dataKey="reads" radius={[4, 4, 0, 0]}>{summary.timeline.map((point) => <Cell key={point.month} fill={aColor(point.meanA)} />)}</Bar></BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
+        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Grouped by control type; bar height is reads and fill colour is mean A</p></div><div className="recurrence-legends"><div className="control-type-legend">{summary.controlTypes.map((type) => <span key={type}><i style={{ borderColor: CONTROL_TYPE_STROKES[type] || '#65756d' }} />{type}</span>)}</div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div></div>
+        {summary.timeline.length ? <div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} />{summary.controlTypes.map((type) => <Bar key={type} name={type} dataKey={(point) => point.controls[type]?.reads || 0} radius={[4, 4, 0, 0]}>{summary.timeline.map((point) => <Cell key={point.month} fill={aColor(point.controls[type]?.meanA)} stroke={CONTROL_TYPE_STROKES[type] || '#65756d'} strokeWidth={1.5} />)}</Bar>)}</BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
       </article>
       <article className="panel analysis-list-panel">
         <div className="panel-head"><div><span className="kicker">LIBRARIES</span><h2>Where it appears</h2><p>{summary.libraries.length} matching libraries</p></div></div>
@@ -253,7 +270,7 @@ function summarizeLibrary(rows) {
   return { reads, profile, meanA: aReads ? aSum / aReads : null }
 }
 
-export function LibraryComparison({ records = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenTaxon, onOpenLibrary }) {
+export function LibraryComparison({ records = [], metadata = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenTaxon, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -282,6 +299,13 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
     (kingdom === 'All' || row.kingdom === kingdom) &&
     (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
   ), [records, pipeline, kingdom, minimumA])
+  const libraryInfo = useMemo(() => {
+    const result = new Map(metadata.map((item) => [item.libraryId, { date: item.date, month: item.month, controlType: item.controlType }]))
+    records.forEach((row) => { if (!result.has(row.libraryId)) result.set(row.libraryId, { month: row.month, controlType: row.controlType }) })
+    return result
+  }, [records, metadata])
+  const leftInfo = libraryInfo.get(left)
+  const rightInfo = libraryInfo.get(right)
   const leftSummary = summarizeLibrary(filtered.filter((row) => row.libraryId === left))
   const rightSummary = summarizeLibrary(filtered.filter((row) => row.libraryId === right))
   const names = new Set([...leftSummary.profile.keys(), ...rightSummary.profile.keys()])
@@ -321,7 +345,7 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
       { label: `Only ${right || 'B'}`, value: rightOnly, detail: 'Unique taxa' },
     ]} />
     {left === right ? <div className="panel analysis-empty tall">Choose two different libraries to compare.</div> : <article className="panel compare-panel">
-      <div className="compare-head"><button onClick={() => onOpenLibrary(left)}><b>{left}{warningIds.has(left) && <AlertTriangle size={12} />}</b><span>{fmt(leftSummary.reads)} reads · mean A {leftSummary.meanA?.toFixed(3) ?? '—'}</span></button><div><span>Relative abundance</span><small>Top {taxa.length} combined taxa</small></div><button onClick={() => onOpenLibrary(right)}><b>{right}{warningIds.has(right) && <AlertTriangle size={12} />}</b><span>{fmt(rightSummary.reads)} reads · mean A {rightSummary.meanA?.toFixed(3) ?? '—'}</span></button></div>
+      <div className="compare-head"><button onClick={() => onOpenLibrary(left)}><b>{left}{warningIds.has(left) && <AlertTriangle size={12} />}</b><span>{leftInfo ? `${dateLabel(leftInfo.date || leftInfo.month)} · ${leftInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(leftSummary.reads)} reads · mean A {leftSummary.meanA?.toFixed(3) ?? '—'}</small></button><div><span>Relative abundance</span><small>Top {taxa.length} combined taxa</small></div><button onClick={() => onOpenLibrary(right)}><b>{right}{warningIds.has(right) && <AlertTriangle size={12} />}</b><span>{rightInfo ? `${dateLabel(rightInfo.date || rightInfo.month)} · ${rightInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(rightSummary.reads)} reads · mean A {rightSummary.meanA?.toFixed(3) ?? '—'}</small></button></div>
       <div className="compare-taxa">{taxa.map((item) => {
         const leftShare = leftSummary.reads ? item.leftReads / leftSummary.reads * 100 : 0
         const rightShare = rightSummary.reads ? item.rightReads / rightSummary.reads * 100 : 0
