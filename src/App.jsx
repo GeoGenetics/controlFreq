@@ -166,6 +166,7 @@ function App() {
   const closePeak = () => { setPeakMonth(""); setPeakTaxon("") }
   const addToComparison = (libraryId) => setComparisonLibraries((current) => current.includes(libraryId) ? current : current.length < 2 ? [...current, libraryId] : [current[1], libraryId])
   const removeFromComparison = (libraryId) => setComparisonLibraries((current) => current.filter((id) => id !== libraryId))
+  const compareLibraries = (left, right) => { setComparisonLibraries([left, right]); setActiveTab("compare") }
 
   const exportCsv = () => {
     const header = 'month,control_type,kingdom,pipeline,taxon,reads,libraries,mean_A\n'
@@ -274,7 +275,7 @@ function App() {
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onOpenTaxon={openTaxon} />
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />

@@ -19,7 +19,11 @@ Taxon names throughout the dashboard open Taxon Explorer. That view uses bar
 height for assigned reads and a fixed colour scale for read-weighted mean A.
 
 Library Explorer explains the warning baseline, provides a persistent two-slot
-comparison tray, and shows detailed lineage values on Krona hover. The PCoA tab
+comparison tray, and shows detailed lineage values on Krona hover. Internal
+Krona branches zoom the hierarchy, while terminal taxa open Taxon Explorer.
+A Similar Libraries section ranks the eight nearest filtered profiles using
+100 × (1 − Bray–Curtis distance), with date, control type, shared taxa, warning
+status, and direct open/compare actions. The PCoA tab
 uses Bray-Curtis distances of relative genus abundance. Dedicated tabs provide
 taxon recurrence, library comparison, damage/A distributions, run/batch QC, and
 a co-occurrence network based on library co-presence and Jaccard similarity.

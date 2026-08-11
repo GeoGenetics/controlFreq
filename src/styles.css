@@ -536,3 +536,36 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .page-guide-items section { border-left: 0; border-top: 1px solid #e9efec; }
   .page-guide-items section:first-child { border-top: 0; }
 }
+
+.similar-libraries-panel { margin-top: 14px; overflow: hidden; }
+.similarity-count { min-width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: #e8f5ef; color: #17855f; font: 700 11px Manrope; }
+.similarity-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.similarity-list > div { min-height: 112px; padding: 13px 16px; display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 13px; align-items: center; border-top: 1px solid #edf1ef; border-left: 1px solid #edf1ef; }
+.similarity-list > div:nth-child(odd) { border-left: 0; }
+.similarity-list > div:nth-child(-n+2) { border-top: 0; }
+.similarity-score { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.similarity-score b { color: #18855f; font: 800 18px Manrope; }
+.similarity-score small { color: #919d97; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.similarity-score > i { width: 100%; height: 5px; margin-top: 6px; border-radius: 3px; background: #e7eeea; overflow: hidden; }
+.similarity-score > i span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #7b72df, #20ad7b); }
+.similarity-details { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.similarity-details > span { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.similarity-details > span svg { color: #d05a4f; flex: 0 0 auto; }
+.similarity-details > small { color: #89968f; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.similarity-details p { margin: 2px 0 0; color: #77857e; font-size: 9px; line-height: 1.45; }
+.similarity-details p > b { color: #52635a; }
+.similarity-details p span { display: inline; }
+.similarity-details p .taxon-link { font-size: inherit; }
+.similarity-actions { display: flex; flex-direction: column; gap: 6px; }
+.similarity-actions .secondary, .similarity-actions .compare-now { height: 31px; min-width: 82px; justify-content: center; padding: 0 9px; font-size: 9px; }
+.similarity-note { margin: 0; padding: 10px 16px; border-top: 1px solid #edf1ef; background: #fafbfa; color: #89968f; font-size: 9px; }
+
+@media (max-width: 1050px) {
+  .similarity-list { grid-template-columns: 1fr; }
+  .similarity-list > div { border-left: 0; }
+  .similarity-list > div:nth-child(2) { border-top: 1px solid #edf1ef; }
+}
+@media (max-width: 600px) {
+  .similarity-list > div { grid-template-columns: 68px minmax(0, 1fr); }
+  .similarity-actions { grid-column: 1 / -1; flex-direction: row; }
+}

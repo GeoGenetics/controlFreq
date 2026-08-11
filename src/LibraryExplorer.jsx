@@ -4,6 +4,7 @@ import PageGuide from './PageGuide.jsx'
 
 const PALETTE = ['#20b884', '#6d8ee8', '#f0ad3d', '#9b72d4', '#e06d5d', '#46a8b6', '#88b84c']
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+const formatMonth = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en', { month: 'short', year: 'numeric' })
 
 function SelectFilter({ label, value, options, onChange }) {
   return <label className="filter-field"><span>{label}</span><div className="select-wrap"><select value={value} onChange={(event) => onChange(event.target.value)}><option value="All">All {label.toLowerCase()}</option>{options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={15} /></div></label>
@@ -50,7 +51,7 @@ function arcPath(inner, outer, start, end) {
   return `M ${a.x} ${a.y} A ${outer} ${outer} 0 ${large} 1 ${b.x} ${b.y} L ${c.x} ${c.y} A ${inner} ${inner} 0 ${large} 0 ${d.x} ${d.y} Z`
 }
 
-function Sunburst({ tree, focusPath, onFocus }) {
+function Sunburst({ tree, focusPath, onFocus, onOpenTaxon }) {
   const [hover, setHover] = useState(null)
   const focus = findNode(tree, focusPath)
   const arcs = []
@@ -77,7 +78,7 @@ function Sunburst({ tree, focusPath, onFocus }) {
         d={arcPath(72 + (depth - 1) * 39, 108 + (depth - 1) * 39, start + .25, end - .25)}
         fill={PALETTE[branch % PALETTE.length]}
         opacity={1 - (depth - 1) * .1}
-        onClick={() => onFocus(node.path)}
+        onClick={() => node.children.size ? onFocus(node.path) : onOpenTaxon(node.name)}
         onMouseMove={(event) => setHover({ node, x: event.clientX + 14, y: event.clientY + 14 })}
         className="sunburst-arc"
       />)}
@@ -86,12 +87,12 @@ function Sunburst({ tree, focusPath, onFocus }) {
       <text x="260" y="260" textAnchor="middle" className="sunburst-value">{fmt(focus.reads)}</text>
       <text x="260" y="278" textAnchor="middle" className="sunburst-detail">{meanA === null ? 'No A value' : `mean A ${meanA.toFixed(3)}`}</text>
     </svg>
-    {hover && <div className="sunburst-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.path.join(" › ")}</span><div><strong>{hover.node.reads.toLocaleString()}</strong> reads · <strong>{(hover.node.reads / focus.reads * 100).toFixed(1)}%</strong> of view</div>{hover.node.aReads > 0 && <small>Mean A {(hover.node.aSum / hover.node.aReads).toFixed(3)}</small>}<em>Click to focus</em></div>}
-    <p className="sunburst-hint">Select a segment to focus · use the breadcrumb to move back</p>
+    {hover && <div className="sunburst-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.path.join(" › ")}</span><div><strong>{hover.node.reads.toLocaleString()}</strong> reads · <strong>{(hover.node.reads / focus.reads * 100).toFixed(1)}%</strong> of view</div>{hover.node.aReads > 0 && <small>Mean A {(hover.node.aSum / hover.node.aReads).toFixed(3)}</small>}<em>{hover.node.children.size ? 'Click to focus this branch' : 'Click to open Taxon Explorer'}</em></div>}
+    <p className="sunburst-hint">Select a branch to focus · select a terminal taxon to explore it · use the breadcrumb to move back</p>
   </div>
 }
 
-export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onOpenTaxon }) {
+export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -100,6 +101,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
   const [focusPath, setFocusPath] = useState([])
 
   const libraryIds = useMemo(() => [...new Set(records.map((row) => row.libraryId))].sort(), [records])
+  const warningIds = useMemo(() => new Set(warnings.map((row) => row.libraryId)), [warnings])
   useEffect(() => { if (selectedLibrary) setLibraryQuery(selectedLibrary) }, [selectedLibrary])
   useEffect(() => { setFocusPath([]) }, [selectedLibrary, pipeline, kingdom, minReads, minA])
 
@@ -124,6 +126,42 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
       (damage === null || (Number.isFinite(damage) && row.meanA !== null && row.meanA >= damage)))
   }, [libraryRows, pipeline, kingdom, minReads, minA])
 
+  const similarityRows = useMemo(() => {
+    const reads = minReads === '' ? 0 : Number(minReads)
+    const damage = minA === '' ? null : Number(minA)
+    return records.filter((row) =>
+      (pipeline === 'All' || row.pipeline === pipeline) &&
+      (kingdom === 'All' || row.kingdom === kingdom) &&
+      row.reads >= (Number.isFinite(reads) ? reads : 0) &&
+      (damage === null || (Number.isFinite(damage) && row.meanA !== null && row.meanA >= damage)))
+  }, [records, pipeline, kingdom, minReads, minA])
+
+  const similarLibraries = useMemo(() => {
+    const profiles = new Map()
+    for (const row of similarityRows) {
+      const item = profiles.get(row.libraryId) || { libraryId: row.libraryId, reads: 0, taxa: new Map(), month: row.month, controlType: row.controlType, pipelines: new Set() }
+      item.reads += row.reads
+      item.taxa.set(row.name, (item.taxa.get(row.name) || 0) + row.reads)
+      item.pipelines.add(row.pipeline)
+      profiles.set(row.libraryId, item)
+    }
+    const target = profiles.get(selectedLibrary)
+    if (!target?.reads) return []
+    return [...profiles.values()].filter((item) => item.libraryId !== selectedLibrary && item.reads > 0).map((item) => {
+      const shared = []
+      let overlap = 0
+      for (const [name, targetReads] of target.taxa) {
+        const otherReads = item.taxa.get(name) || 0
+        if (!otherReads) continue
+        const contribution = Math.min(targetReads / target.reads, otherReads / item.reads)
+        overlap += contribution
+        shared.push({ name, contribution })
+      }
+      shared.sort((a, b) => b.contribution - a.contribution)
+      return { ...item, similarity: overlap * 100, sharedTaxa: shared.length, common: shared.slice(0, 3).map((entry) => entry.name) }
+    }).filter((item) => item.similarity > 0).sort((a, b) => b.similarity - a.similarity || b.sharedTaxa - a.sharedTaxa).slice(0, 8)
+  }, [similarityRows, selectedLibrary])
+
   const tree = useMemo(() => buildTree(filtered), [filtered])
   const focused = findNode(tree, focusPath)
   const topTaxa = [...focused.children.values()].sort((a, b) => b.reads - a.reads).slice(0, 12)
@@ -141,7 +179,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
 
     <PageGuide items={[
       { title: 'Choose one library', text: 'Search for a library ID or arrive here by clicking a warning, chart drill-down, or PCoA point. Everything below then describes that single library.' },
-      { title: 'Explore the rings', text: 'Larger Krona segments contain more assigned reads. Click a segment to zoom into that branch; use the breadcrumb above the plot to move back up.' },
+      { title: 'Explore the rings', text: 'Larger Krona segments contain more assigned reads. Click an internal branch to zoom; click a terminal taxon to open Taxon Explorer. The hover message tells you which action applies.' },
       { title: 'Filter or compare', text: 'Read and A filters hide taxon observations that do not meet the threshold. Add the library to slot A or B when you want a direct profile comparison.' },
     ]} />
 
@@ -190,7 +228,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
               <button onClick={() => setFocusPath([])}><CornerUpLeft size={13} />All taxa</button>
               {focusPath.map((name, index) => <button key={focusPath.slice(0, index + 1).join('>')} onClick={() => setFocusPath(focusPath.slice(0, index + 1))}>{name}</button>)}
             </div>
-            {filtered.length ? <Sunburst tree={tree} focusPath={focusPath} onFocus={setFocusPath} /> : <div className="explorer-empty compact"><AlertTriangle size={20} /><h2>No matching taxa</h2><p>Widen the filters to restore the hierarchy.</p></div>}
+            {filtered.length ? <Sunburst tree={tree} focusPath={focusPath} onFocus={setFocusPath} onOpenTaxon={onOpenTaxon} /> : <div className="explorer-empty compact"><AlertTriangle size={20} /><h2>No matching taxa</h2><p>Widen the filters to restore the hierarchy.</p></div>}
           </article>
 
           <article className="panel lineage-panel">
@@ -202,6 +240,23 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
             </button>)}</div>
           </article>
         </div>
+
+        <article className="panel similar-libraries-panel">
+          <div className="panel-head"><div><span className="kicker">NEAREST PROFILES</span><h2>Similar libraries</h2><p>Bray–Curtis similarity after the active pipeline, kingdom, read, and A filters</p></div><span className="similarity-count">{similarLibraries.length}</span></div>
+          <div className="similarity-list">{similarLibraries.map((item) => <div key={item.libraryId}>
+            <div className="similarity-score"><b>{item.similarity.toFixed(1)}%</b><small>similar</small><i><span style={{ width: `${item.similarity}%` }} /></i></div>
+            <div className="similarity-details">
+              <span><button className="library-link" onClick={() => chooseLibrary(item.libraryId)}>{item.libraryId}</button>{warningIds.has(item.libraryId) && <AlertTriangle size={12} />}</span>
+              <small>{formatMonth(item.month)} · {item.controlType} · {[...item.pipelines].join(' + ')}</small>
+              <p><b>{item.sharedTaxa} taxa in common</b>{item.common.length > 0 && <> · {item.common.map((name, index) => <span key={name}>{index > 0 && ', '}<button className="taxon-link compact" onClick={() => onOpenTaxon(name)}>{name}</button></span>)}</>}</p>
+            </div>
+            <div className="similarity-actions">
+              <button className="secondary" onClick={() => chooseLibrary(item.libraryId)}>Open</button>
+              <button className="compare-now" onClick={() => onCompareWith(selectedLibrary, item.libraryId)}><GitCompareArrows size={13} />Compare</button>
+            </div>
+          </div>)}{!similarLibraries.length && <div className="explorer-empty compact"><Search size={20} /><h2>No similar libraries found</h2><p>Widen the filters to include more shared taxa.</p></div>}</div>
+          <p className="similarity-note">100% means identical relative taxon composition after filtering; 0% means no taxon overlap. Similarity describes composition, not shared origin.</p>
+        </article>
       </>}
   </section>
 }
