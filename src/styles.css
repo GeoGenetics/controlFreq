@@ -416,3 +416,56 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .compare-tray-intro { grid-column: auto; }
   .compare-tray-actions { justify-content: flex-start; flex-wrap: wrap; }
 }
+
+.taxon-link { border: 0; background: transparent; color: #177e5c; padding: 0; font: inherit; font-weight: 700; text-align: left; }
+.taxon-link:hover { color: #0e684a; text-decoration: underline; }
+.taxon-link.compact { display: inline; font-size: inherit; }
+.warning-row .taxon-link { color: #65756d; }
+.library-warning-details .taxon-link { color: #53665c; }
+.heatmap-table .taxon-link { max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.table-panel .taxon-link { color: #26372f; font-weight: 700; }
+.a-legend { align-self: center; display: flex; align-items: center; gap: 6px; color: #87938d; font-size: 9px; }
+.a-legend i { width: 78px; height: 8px; border-radius: 5px; background: linear-gradient(90deg, hsl(210 72% 72%), hsl(115 72% 61%), hsl(20 72% 50%)); }
+.a-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.compare-taxa .compare-name { grid-column: 2; grid-row: 1; font-size: 10px; text-align: center; color: #45554d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.network-filters { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
+.network-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; color: #78867f; font-size: 9px; padding-bottom: 7px; }
+.network-legend span { display: flex; align-items: center; gap: 6px; }
+.network-legend i { display: block; width: 24px; background: #7f958b; }
+.network-legend .thin { height: 1px; opacity: .45; }
+.network-legend .thick { height: 4px; opacity: .8; }
+.network-grid { display: grid; grid-template-columns: minmax(560px, 1.6fr) minmax(320px, .65fr); gap: 14px; }
+.network-panel, .network-pairs { overflow: hidden; min-height: 650px; }
+.network-canvas { position: relative; height: 570px; background: radial-gradient(circle at center, #f9fbfa, #fff 68%); }
+.network-canvas svg { width: 100%; height: 100%; }
+.network-edges line { stroke: #718c80; }
+.network-nodes g { cursor: pointer; }
+.network-nodes circle { stroke: white; stroke-width: 2; filter: drop-shadow(0 2px 3px #17372a24); transition: stroke-width .15s, filter .15s; }
+.network-nodes g:hover circle { stroke-width: 4; filter: drop-shadow(0 4px 7px #17372a4a); }
+.network-nodes text { fill: #51645b; font: 600 8px 'DM Sans'; paint-order: stroke; stroke: white; stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.network-tooltip { position: fixed; z-index: 150; width: min(300px, calc(100vw - 24px)); pointer-events: none; padding: 11px 12px; border-radius: 9px; background: #10251df2; color: white; box-shadow: 0 12px 30px #0d211983; display: flex; flex-direction: column; gap: 3px; transform: translateY(-100%); }
+.network-tooltip b { font: 700 12px Manrope; }
+.network-tooltip > span, .network-tooltip small { color: #adbbb5; font-size: 9px; }
+.network-tooltip div { margin-top: 3px; color: #d6e1dc; font-size: 10px; }
+.network-tooltip div strong { color: white; }
+.network-tooltip em { color: #6ee0b4; font-size: 9px; font-style: normal; }
+.pair-list { max-height: 570px; overflow-y: auto; }
+.pair-list > div { min-height: 58px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 15px; border-top: 1px solid #edf1ef; }
+.pair-list > div:first-child { border-top: 0; }
+.pair-list > div > span { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.pair-list i { color: #a1aaa5; font-size: 9px; font-style: normal; }
+.pair-list strong { display: flex; flex-direction: column; gap: 2px; color: #177e5c; font: 700 12px Manrope; text-align: right; }
+.pair-list strong small { color: #8b9791; font: 500 8px 'DM Sans'; }
+.analysis-method-note { margin: 11px 3px 0; color: #89958f; font-size: 9px; }
+
+@media (max-width: 1150px) {
+  .network-grid { grid-template-columns: 1fr; }
+  .network-pairs { min-height: auto; max-height: 520px; }
+}
+@media (max-width: 760px) {
+  .network-filters { grid-template-columns: 1fr 1fr; }
+  .network-legend { justify-content: flex-start; }
+  .network-panel { min-height: auto; }
+  .network-canvas { height: 480px; overflow-x: auto; }
+  .network-canvas svg { min-width: 650px; }
+}

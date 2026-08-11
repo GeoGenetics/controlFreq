@@ -4,7 +4,7 @@ import {
   Search, ShieldAlert, TestTubes,
 } from 'lucide-react'
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart,
+  Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 
@@ -13,6 +13,11 @@ const COLORS = {
   'Other Eukaryote': '#b08cff',
 }
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
+const aColor = (value) => {
+  if (value === null || value === undefined || !Number.isFinite(value)) return "#d8dfdc"
+  const t = Math.max(0, Math.min(1, value / .3))
+  return `hsl(${210 - 190 * t} 72% ${72 - 22 * t}%)`
+}
 const monthLabel = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en', { month: 'short', year: '2-digit' })
 
 function FilterSelect({ label, value, options, onChange }) {
@@ -23,8 +28,14 @@ function MetricStrip({ items }) {
   return <div className="analysis-metrics panel">{items.map((item) => <div key={item.label}><span>{item.label}</span><b>{item.value}</b><small>{item.detail}</small></div>)}</div>
 }
 
-export function TaxonExplorer({ records = [], warnings = [], onOpenLibrary }) {
-  const [taxon, setTaxon] = useState('')
+function TaxonATooltip({ active, payload, label }) {
+  const point = payload?.[0]?.payload
+  if (!active || !point) return null
+  return <div className="chart-tooltip"><b>{monthLabel(label)}</b><div>Reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? "—" : point.meanA.toFixed(3)}</span></div></div>
+}
+
+export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "", onSelectTaxon, onOpenLibrary }) {
+  const taxon = selectedTaxon
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minReads, setMinReads] = useState('')
@@ -39,9 +50,9 @@ export function TaxonExplorer({ records = [], warnings = [], onOpenLibrary }) {
     if (!taxon && records.length) {
       const totals = new Map()
       records.forEach((row) => totals.set(row.name, (totals.get(row.name) || 0) + row.reads))
-      setTaxon([...totals].sort((a, b) => b[1] - a[1])[0]?.[0] || '')
+      onSelectTaxon([...totals].sort((a, b) => b[1] - a[1])[0]?.[0] || "")
     }
-  }, [records, taxon])
+  }, [records, taxon, onSelectTaxon])
 
   const baseRows = useMemo(() => {
     const reads = minReads === '' ? 0 : Number(minReads)
@@ -65,22 +76,22 @@ export function TaxonExplorer({ records = [], warnings = [], onOpenLibrary }) {
       library.reads += row.reads
       if (row.meanA !== null) { aSum += row.meanA * row.reads; aReads += row.reads; library.aSum += row.meanA * row.reads; library.aReads += row.reads }
       libraries.set(row.libraryId, library)
-      const point = months.get(row.month) || { month: row.month, reads: 0 }
+      const point = months.get(row.month) || { month: row.month, reads: 0, aSum: 0, aReads: 0 }
       point.reads += row.reads
+      if (row.meanA !== null) { point.aSum += row.meanA * row.reads; point.aReads += row.reads }
       months.set(row.month, point)
     }
     return {
       reads, meanA: aReads ? aSum / aReads : null,
       libraries: [...libraries.values()].sort((a, b) => b.reads - a.reads),
-      timeline: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)),
+      timeline: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)).map((item) => ({ ...item, meanA: item.aReads ? item.aSum / item.aReads : null })),
     }
   }, [rows])
-  const selectedKingdom = rows[0]?.kingdom || baseRows.find((row) => row.name === taxon)?.kingdom
 
   return <section className="analysis-page">
     <div className="explorer-hero">
       <div><span className="kicker">TAXON EXPLORER</span><h1>Taxon recurrence</h1><p>Follow one taxon across libraries, controls, and time.</p></div>
-      <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => setTaxon(event.target.value)} placeholder="Search taxon…" /><datalist id="taxon-explorer-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
+      <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => onSelectTaxon(event.target.value)} placeholder="Search taxon…" /><datalist id="taxon-explorer-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
     </div>
     <div className="panel explorer-filters analysis-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
@@ -96,12 +107,12 @@ export function TaxonExplorer({ records = [], warnings = [], onOpenLibrary }) {
     ]} />
     <div className="analysis-grid">
       <article className="panel analysis-chart-panel">
-        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Assigned reads by month</p></div>{selectedKingdom && <span className="tag"><i style={{ background: COLORS[selectedKingdom] }} />{selectedKingdom}</span>}</div>
-        {summary.timeline.length ? <div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><AreaChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><defs><linearGradient id="taxon-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#20b884" stopOpacity=".35" /><stop offset="1" stopColor="#20b884" stopOpacity=".02" /></linearGradient></defs><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toLocaleString(), 'Reads']} /><Area dataKey="reads" stroke="#20a97b" fill="url(#taxon-area)" strokeWidth={2} /></AreaChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
+        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Bar height is reads; colour encodes monthly mean A</p></div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div>
+        {summary.timeline.length ? <div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} /><Bar dataKey="reads" radius={[4, 4, 0, 0]}>{summary.timeline.map((point) => <Cell key={point.month} fill={aColor(point.meanA)} />)}</Bar></BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
       </article>
       <article className="panel analysis-list-panel">
         <div className="panel-head"><div><span className="kicker">LIBRARIES</span><h2>Where it appears</h2><p>{summary.libraries.length} matching libraries</p></div></div>
-        <div className="analysis-list">{summary.libraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b>{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `A ${(item.aSum / item.aReads).toFixed(3)}` : 'A —'}</small></strong><ArrowRight size={14} /></button>)}</div>
+        <div className="analysis-list">{summary.libraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b><i className="a-dot" style={{ background: aColor(item.aReads ? item.aSum / item.aReads : null) }} />{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `A ${(item.aSum / item.aReads).toFixed(3)}` : 'A —'}</small></strong><ArrowRight size={14} /></button>)}</div>
       </article>
     </div>
   </section>
@@ -118,7 +129,7 @@ function summarizeLibrary(rows) {
   return { reads, profile, meanA: aReads ? aSum / aReads : null }
 }
 
-export function LibraryComparison({ records = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenLibrary }) {
+export function LibraryComparison({ records = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenTaxon, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
 
@@ -182,13 +193,13 @@ export function LibraryComparison({ records = [], warnings = [], comparisonLibra
       <div className="compare-taxa">{taxa.map((item) => {
         const leftShare = leftSummary.reads ? item.leftReads / leftSummary.reads * 100 : 0
         const rightShare = rightSummary.reads ? item.rightReads / rightSummary.reads * 100 : 0
-        return <div key={item.name}><span className="compare-bar left"><i style={{ width: `${leftShare}%` }} /></span><b title={item.name}>{item.name}</b><span className="compare-bar right"><i style={{ width: `${rightShare}%` }} /></span><small>{leftShare.toFixed(1)}%</small><small>{rightShare.toFixed(1)}%</small></div>
+        return <div key={item.name}><span className="compare-bar left"><i style={{ width: `${leftShare}%` }} /></span><button className="taxon-link compare-name" title={item.name} onClick={() => onOpenTaxon(item.name)}>{item.name}</button><span className="compare-bar right"><i style={{ width: `${rightShare}%` }} /></span><small>{leftShare.toFixed(1)}%</small><small>{rightShare.toFixed(1)}%</small></div>
       })}</div>
     </article>}
   </section>
 }
 
-export function DamageExplorer({ records = [] }) {
+export function DamageExplorer({ records = [], onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minReads, setMinReads] = useState('50')
@@ -242,7 +253,7 @@ export function DamageExplorer({ records = [] }) {
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Count of library-taxon observations</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" fill="#7b72df" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></article>
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Read-weighted by month</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} /><Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div></article>
     </div>
-    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">HIGHEST DAMAGE</span><h2>Taxa ranked by mean A</h2><p>Minimum read filter applies before aggregation</p></div></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{analysis.taxa.map((item) => <tr key={item.name}><td><b>{item.name}</b></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
+    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">HIGHEST DAMAGE</span><h2>Taxa ranked by mean A</h2><p>Minimum read filter applies before aggregation</p></div></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{analysis.taxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
   </section>
 }
 
@@ -316,5 +327,130 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
         return <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b>{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{meta?.controlId || 'Control'} · {meta?.project || 'No project'}</small><em>{item.topTaxon}</em></span><strong>{item.reads.toLocaleString()}<small>{meta?.flowcell || 'No flowcell'}</small></strong><ArrowRight size={14} /></button>
       })}</div></article>
     </div>}
+  </section>
+}
+
+function buildCooccurrence(rows, maxTaxa, minimumShared) {
+  const libraries = new Map()
+  const taxa = new Map()
+  for (const row of rows) {
+    const present = libraries.get(row.libraryId) || new Set()
+    present.add(row.name); libraries.set(row.libraryId, present)
+    const item = taxa.get(row.name) || { name: row.name, kingdom: row.kingdom, reads: 0, aSum: 0, aReads: 0, libraries: new Set() }
+    item.reads += row.reads; item.libraries.add(row.libraryId)
+    if (row.meanA !== null) { item.aSum += row.meanA * row.reads; item.aReads += row.reads }
+    taxa.set(row.name, item)
+  }
+  const nodes = [...taxa.values()].sort((a, b) => b.libraries.size - a.libraries.size || b.reads - a.reads).slice(0, maxTaxa)
+  const selected = new Set(nodes.map((node) => node.name))
+  const counts = new Map()
+  for (const present of libraries.values()) {
+    const names = [...present].filter((name) => selected.has(name)).sort()
+    for (let i = 0; i < names.length; i += 1) {
+      for (let j = i + 1; j < names.length; j += 1) {
+        const key = names[i] + "\u0000" + names[j]
+        counts.set(key, (counts.get(key) || 0) + 1)
+      }
+    }
+  }
+  const nodeMap = new Map(nodes.map((node, index) => [node.name, { ...node, index, degree: 0 }]))
+  const edges = [...counts].map(([key, shared]) => {
+    const [source, target] = key.split("\u0000")
+    const union = nodeMap.get(source).libraries.size + nodeMap.get(target).libraries.size - shared
+    return { source, target, shared, jaccard: union ? shared / union : 0 }
+  }).filter((edge) => edge.shared >= minimumShared).sort((a, b) => b.jaccard - a.jaccard || b.shared - a.shared).slice(0, 100)
+  edges.forEach((edge) => { nodeMap.get(edge.source).degree += 1; nodeMap.get(edge.target).degree += 1 })
+
+  const laidOut = [...nodeMap.values()]
+  laidOut.forEach((node, index) => {
+    const angle = index / Math.max(1, laidOut.length) * Math.PI * 2
+    node.x = Math.cos(angle) * 220
+    node.y = Math.sin(angle) * 220
+  })
+  for (let iteration = 0; iteration < 130; iteration += 1) {
+    const forces = laidOut.map(() => ({ x: 0, y: 0 }))
+    for (let i = 0; i < laidOut.length; i += 1) {
+      for (let j = i + 1; j < laidOut.length; j += 1) {
+        const dx = laidOut[j].x - laidOut[i].x
+        const dy = laidOut[j].y - laidOut[i].y
+        const distanceSquared = Math.max(36, dx * dx + dy * dy)
+        const force = 900 / distanceSquared
+        const distance = Math.sqrt(distanceSquared)
+        forces[i].x -= dx / distance * force; forces[i].y -= dy / distance * force
+        forces[j].x += dx / distance * force; forces[j].y += dy / distance * force
+      }
+    }
+    for (const edge of edges) {
+      const source = nodeMap.get(edge.source); const target = nodeMap.get(edge.target)
+      const dx = target.x - source.x; const dy = target.y - source.y
+      const distance = Math.max(1, Math.sqrt(dx * dx + dy * dy))
+      const force = (distance - 115) * (.006 + edge.jaccard * .02)
+      forces[source.index].x += dx / distance * force; forces[source.index].y += dy / distance * force
+      forces[target.index].x -= dx / distance * force; forces[target.index].y -= dy / distance * force
+    }
+    laidOut.forEach((node, index) => {
+      node.x = (node.x + forces[index].x) * .985
+      node.y = (node.y + forces[index].y) * .985
+    })
+  }
+  const xExtent = Math.max(1, ...laidOut.map((node) => Math.abs(node.x)))
+  const yExtent = Math.max(1, ...laidOut.map((node) => Math.abs(node.y)))
+  laidOut.forEach((node) => {
+    node.x = 400 + node.x / xExtent * 325
+    node.y = 300 + node.y / yExtent * 235
+    node.radius = 7 + Math.sqrt(node.libraries.size) * 2.2
+  })
+  return { nodes: laidOut, nodeMap, edges, libraryCount: libraries.size, taxonCount: taxa.size }
+}
+
+export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
+  const [pipeline, setPipeline] = useState('All')
+  const [kingdom, setKingdom] = useState('All')
+  const [minimumShared, setMinimumShared] = useState('3')
+  const [maxTaxa, setMaxTaxa] = useState('30')
+  const [hover, setHover] = useState(null)
+  const dimensions = useMemo(() => ({
+    pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
+    kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
+  }), [records])
+  const filtered = useMemo(() => records.filter((row) =>
+    (pipeline === 'All' || row.pipeline === pipeline) &&
+    (kingdom === 'All' || row.kingdom === kingdom)
+  ), [records, pipeline, kingdom])
+  const network = useMemo(() => buildCooccurrence(filtered, Number(maxTaxa), Math.max(1, Number(minimumShared) || 1)), [filtered, maxTaxa, minimumShared])
+  const strongest = network.edges[0]
+
+  return <section className="analysis-page">
+    <div className="explorer-hero"><div><span className="kicker">CO-OCCURRENCE</span><h1>Taxon association network</h1><p>Edges connect taxa repeatedly detected in the same control libraries.</p></div><div className="network-legend"><span><i className="thin" />Weaker Jaccard</span><span><i className="thick" />Stronger Jaccard</span></div></div>
+    <div className="panel explorer-filters network-filters">
+      <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
+      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum shared libraries</span><input type="number" min="1" max="50" value={minimumShared} onChange={(event) => setMinimumShared(event.target.value)} /></label>
+      <label className="filter-field"><span>Most prevalent taxa</span><div className="select-wrap"><select value={maxTaxa} onChange={(event) => setMaxTaxa(event.target.value)}>{[20, 30, 40].map((value) => <option key={value} value={value}>Top {value}</option>)}</select><ChevronDown size={15} /></div></label>
+    </div>
+    <MetricStrip items={[
+      { label: 'Libraries', value: network.libraryCount, detail: 'After filters' },
+      { label: 'Taxa considered', value: network.nodes.length, detail: `Of ${network.taxonCount} detected` },
+      { label: 'Associations', value: network.edges.length, detail: 'Up to 100 strongest' },
+      { label: 'Strongest pair', value: strongest ? strongest.jaccard.toFixed(2) : '—', detail: strongest ? `${strongest.shared} shared libraries` : 'No qualifying pairs' },
+    ]} />
+    <div className="network-grid">
+      <article className="panel network-panel">
+        <div className="panel-head"><div><span className="kicker">LIBRARY CO-PRESENCE</span><h2>Co-occurrence network</h2><p>Node size is prevalence; edge strength is Jaccard similarity</p></div></div>
+        {network.edges.length ? <div className="network-canvas"><svg viewBox="0 0 800 600" role="img" aria-label="Taxon co-occurrence network" onMouseLeave={() => setHover(null)}>
+          <g className="network-edges">{network.edges.map((edge) => {
+            const source = network.nodeMap.get(edge.source); const target = network.nodeMap.get(edge.target)
+            return <line key={edge.source + ">" + edge.target} x1={source.x} y1={source.y} x2={target.x} y2={target.y} strokeWidth={.6 + edge.jaccard * 6} opacity={.18 + edge.jaccard * .55} />
+          })}</g>
+          <g className="network-nodes">{network.nodes.map((node, index) => <g key={node.name} transform={`translate(${node.x} ${node.y})`} onMouseMove={(event) => setHover({ node, x: event.clientX + 14, y: event.clientY + 14 })} onClick={() => onOpenTaxon(node.name)}>
+            <circle r={node.radius} fill={COLORS[node.kingdom] || '#7b72df'} />
+            {(index < 15 || node.degree >= 5) && <text y={node.radius + 12} textAnchor="middle">{node.name}</text>}
+          </g>)}</g>
+        </svg>{hover && <div className="network-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.kingdom}</span><div><strong>{hover.node.libraries.size}</strong> libraries · <strong>{hover.node.reads.toLocaleString()}</strong> reads</div><small>{hover.node.aReads ? `Mean A ${(hover.node.aSum / hover.node.aReads).toFixed(3)}` : 'Mean A unavailable'} · {hover.node.degree} associations</small><em>Click to open Taxon Explorer</em></div>}</div>
+          : <div className="analysis-empty tall">No pairs meet the shared-library threshold. Lower the threshold or widen the filters.</div>}
+      </article>
+      <article className="panel network-pairs"><div className="panel-head"><div><span className="kicker">STRONGEST PAIRS</span><h2>Repeated associations</h2><p>Ranked by Jaccard similarity</p></div></div><div className="pair-list">{network.edges.slice(0, 30).map((edge) => <div key={edge.source + edge.target}><span><button className="taxon-link" onClick={() => onOpenTaxon(edge.source)}>{edge.source}</button><i>+</i><button className="taxon-link" onClick={() => onOpenTaxon(edge.target)}>{edge.target}</button></span><strong>{edge.jaccard.toFixed(2)}<small>{edge.shared} shared</small></strong></div>)}</div></article>
+    </div>
+    <p className="analysis-method-note">Co-occurrence is descriptive: shared laboratory sources, common background taxa, or broad prevalence can all create an edge. It does not establish biological interaction.</p>
   </section>
 }

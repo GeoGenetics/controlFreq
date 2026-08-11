@@ -10,16 +10,14 @@ dashboard filters these summaries by taxon, assigned reads, mean A, control,
 kingdom, pipeline, and date.
 
 Warning library IDs and monthly read-volume points open library drill-downs.
-The Library
-Explorer explains the warning baseline and shows each flagged group's observed
-reads, threshold, fold change, and leading taxon. The Krona-style hierarchy
-provides detailed lineage values on hover. The PCoA tab
-uses Bray-Curtis distances of relative genus abundance and supports a minimum
-mean-A filter. Library Explorer includes a persistent two-slot comparison tray synchronized with
-the Compare Libraries tab. Dedicated tabs provide taxon recurrence, two-library
-comparison,
-damage/A distributions, and run/batch QC grouped by control date, run,
-flowcell, machine, or project.
+Taxon names throughout the dashboard open Taxon Explorer. That view uses bar
+height for assigned reads and a fixed colour scale for read-weighted mean A.
+
+Library Explorer explains the warning baseline, provides a persistent two-slot
+comparison tray, and shows detailed lineage values on Krona hover. The PCoA tab
+uses Bray-Curtis distances of relative genus abundance. Dedicated tabs provide
+taxon recurrence, library comparison, damage/A distributions, run/batch QC, and
+a co-occurrence network based on library co-presence and Jaccard similarity.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
 log-scaled colour intensity. Library warnings use total genus-level reads and

@@ -90,7 +90,7 @@ function Sunburst({ tree, focusPath, onFocus }) {
   </div>
 }
 
-export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison }) {
+export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onOpenTaxon }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -164,7 +164,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
           </div>
           <div className="warning-guide-method"><b>Trigger</b><span>{warningMethod || "Above median + 3 scaled MAD among comparable libraries (minimum 4 libraries)."}</span><small>Libraries are compared only within the same control type, kingdom, and pipeline.</small></div>
           {libraryWarnings.length > 0 ? <div className="library-warning-details">{libraryWarnings.map((item) => <div key={[item.month, item.kingdom, item.pipeline].join("-")}>
-            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: {item.topTaxon || "Unknown"}</em></span>
+            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: <button className="taxon-link compact" onClick={() => onOpenTaxon(item.topTaxon)}>{item.topTaxon || "Unknown"}</button></em></span>
             <span><strong>{item.reads.toLocaleString()} reads</strong><small>Baseline median {item.baseline.toLocaleString()} · threshold {item.threshold.toLocaleString()}</small><em>{item.fold ? item.fold + "× the median" : "Baseline median is zero"}</em></span>
           </div>)}</div> : <div className="library-warning-clear"><span />This library does not exceed the robust baseline in any comparison group.</div>}
         </article>
@@ -188,7 +188,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
 
           <article className="panel lineage-panel">
             <div className="panel-head"><div><span className="kicker">CURRENT LEVEL</span><h2>{focused.name}</h2><p>{topTaxa.length} branches shown, ranked by reads</p></div></div>
-            <div className="lineage-list">{topTaxa.map((item, index) => <button key={item.path.join('>')} onClick={() => setFocusPath(item.path)}>
+            <div className="lineage-list">{topTaxa.map((item, index) => <button key={item.path.join('>')} onClick={() => item.children.size ? setFocusPath(item.path) : onOpenTaxon(item.name)}>
               <span className="lineage-rank">{String(index + 1).padStart(2, '0')}</span>
               <span><b>{item.name}</b><small>{item.aReads ? `mean A ${(item.aSum / item.aReads).toFixed(3)}` : 'A unavailable'}</small></span>
               <strong>{item.reads.toLocaleString()}<small>reads</small></strong>

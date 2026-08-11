@@ -12,7 +12,7 @@ import { fallbackData } from './data.js'
 import LibraryExplorer from "./LibraryExplorer.jsx"
 import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
-import { DamageExplorer, LibraryComparison, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
+import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -53,6 +53,7 @@ function App() {
   const [selectedLibrary, setSelectedLibrary] = useState("")
   const [peakMonth, setPeakMonth] = useState("")
   const [comparisonLibraries, setComparisonLibraries] = useState([])
+  const [selectedTaxon, setSelectedTaxon] = useState("")
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
@@ -158,6 +159,7 @@ function App() {
     setMinReads(''); setMinA(''); setFrom(''); setTo('')
   }
 
+  const openTaxon = (taxonName) => { setSelectedTaxon(taxonName); setActiveTab("taxon"); window.scrollTo({ top: 0, behavior: "smooth" }) }
   const addToComparison = (libraryId) => setComparisonLibraries((current) => current.includes(libraryId) ? current : current.length < 2 ? [...current, libraryId] : [current[1], libraryId])
   const removeFromComparison = (libraryId) => setComparisonLibraries((current) => current.filter((id) => id !== libraryId))
 
@@ -181,6 +183,7 @@ function App() {
           <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
           <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
+          <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => setActiveTab("cooccurrence")}><Network size={18} />Co-occurrence</button>
           {activeTab === "overview" && <>
             <small>SECTIONS</small>
             <a href="#trends"><Activity size={18} />Contamination</a>
@@ -238,7 +241,7 @@ function App() {
           <div className="panel-head"><div><span className="kicker">TAXA x TIME</span><h2>Most abundant taxa over time</h2><p>Top 12 taxa after filtering; colour intensity uses log-scaled reads</p></div><div className="heat-legend"><span>Low</span><i /><i /><i /><i /><span>High</span></div></div>
           <div className="heatmap-scroll">{heatmap.top.length ? <table className="heatmap-table"><thead><tr><th>Taxon</th>{heatmap.months.map((month) => <th key={month}>{prettyDate(month)}</th>)}</tr></thead><tbody>{heatmap.top.map((item) => {
             const key = `${item.kingdom}\u0000${item.name}`
-            return <tr key={key}><th><i style={{ background: COLORS[item.kingdom] }} />{item.name}</th>{heatmap.months.map((month) => {
+            return <tr key={key}><th><i style={{ background: COLORS[item.kingdom] }} /><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></th>{heatmap.months.map((month) => {
               const value = heatmap.values.get(`${key}\u0000${month}`) || 0
               const intensity = value && heatmap.max ? 0.12 + 0.88 * Math.log1p(value) / Math.log1p(heatmap.max) : 0
               return <td key={month} title={`${item.name} - ${prettyDate(month)} - ${value.toLocaleString()} reads`}><span style={{ background: `rgba(26, 170, 117, ${intensity})` }}>{value ? formatNumber(value) : ''}</span></td>
@@ -249,20 +252,21 @@ function App() {
         <section className="bottom-grid" id="taxa">
           <article className="panel table-panel">
             <div className="panel-head"><div><span className="kicker">TAXA EXPLORER</span><h2>Most abundant contaminants</h2><p>Up to 50 taxa ranked after filtering</p></div><label className="search"><Search size={16} /><input placeholder="Search results..." value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
-            <div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Assigned reads</th><th>Mean A</th><th>Trend</th></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><b>{item.name}</b></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`}>{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
+            <div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Assigned reads</th><th>Mean A</th><th>Trend</th></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`}>{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
           </article>
           <article className="panel warning-panel" id="warnings">
             <div className="panel-head"><div><span className="kicker">LIBRARY WARNINGS</span><h2>Higher than normal content</h2><p>{data.warningMethod || 'Available after rebuilding dashboard data'}</p></div><span className={`warning-count ${warnings.length ? 'active' : ''}`}>{warnings.length}</span></div>
-            <div className="warning-list">{warnings.slice(0, 12).map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: {item.topTaxon || 'Unknown'}</small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
+            <div className="warning-list">{warnings.slice(0, 12).map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: <button className="taxon-link compact" onClick={() => openTaxon(item.topTaxon)}>{item.topTaxon || 'Unknown'}</button></small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} />
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onOpenTaxon={openTaxon} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} />
-          : <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />}
+          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
+          : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />}
 
         <PeakLibraries month={peakMonth} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={() => setPeakMonth("")} onOpenLibrary={(libraryId) => { setPeakMonth(""); setSelectedLibrary(libraryId); setActiveTab("library") }} />
 
