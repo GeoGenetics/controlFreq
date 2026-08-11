@@ -387,3 +387,32 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .library-warning-details > div { border-left: 0; border-top: 1px solid #edf1ef; }
   .library-warning-details > div:first-child { border-top: 0; }
 }
+
+.library-compare-tray { margin-bottom: 14px; padding: 12px 14px; display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.2fr) auto; gap: 14px; align-items: center; }
+.compare-tray-intro { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.compare-tray-intro > span { width: 33px; height: 33px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center; color: #6c61c9; background: #eeebfb; }
+.compare-tray-intro > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.compare-tray-intro b { color: #293d34; font-size: 11px; }
+.compare-tray-intro small { color: #8b9791; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compare-tray-slots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
+.compare-tray-slots > span { height: 30px; display: flex; align-items: center; gap: 6px; padding: 0 5px 0 7px; border: 1px solid #ddd9f3; background: #f8f7fd; border-radius: 7px; min-width: 0; }
+.compare-tray-slots i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #7469ce; color: white; font-size: 8px; font-style: normal; font-weight: 800; }
+.compare-tray-slots b { color: #463f7e; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.compare-tray-slots button { width: 20px; height: 20px; border: 0; background: transparent; color: #948daf; padding: 0; display: grid; place-items: center; border-radius: 4px; }
+.compare-tray-slots button:hover { background: #e9e5f8; color: #665caf; }
+.compare-tray-slots em { color: #9aa49f; font-size: 9px; font-style: normal; }
+.compare-tray-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+.compare-tray-actions .secondary { white-space: nowrap; }
+.compare-tray-actions .secondary:disabled { cursor: default; color: #19825e; background: #eaf7f1; border-color: #d4ece1; }
+.compare-now { height: 38px; border: 0; border-radius: 8px; background: #6f64c9; color: white; padding: 0 13px; display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.compare-now:hover { background: #5f55b8; }
+
+@media (max-width: 1150px) {
+  .library-compare-tray { grid-template-columns: 1fr auto; }
+  .compare-tray-intro { grid-column: 1 / -1; }
+}
+@media (max-width: 650px) {
+  .library-compare-tray { grid-template-columns: 1fr; }
+  .compare-tray-intro { grid-column: auto; }
+  .compare-tray-actions { justify-content: flex-start; flex-wrap: wrap; }
+}

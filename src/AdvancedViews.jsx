@@ -118,9 +118,7 @@ function summarizeLibrary(rows) {
   return { reads, profile, meanA: aReads ? aSum / aReads : null }
 }
 
-export function LibraryComparison({ records = [], warnings = [], onOpenLibrary }) {
-  const [left, setLeft] = useState('')
-  const [right, setRight] = useState('')
+export function LibraryComparison({ records = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
 
@@ -129,10 +127,16 @@ export function LibraryComparison({ records = [], warnings = [], onOpenLibrary }
     records.forEach((row) => totals.set(row.libraryId, (totals.get(row.libraryId) || 0) + row.reads))
     return [...totals].sort((a, b) => b[1] - a[1]).map(([id]) => id)
   }, [records])
+  const left = comparisonLibraries[0] || ""
+  const right = comparisonLibraries[1] || ""
   useEffect(() => {
-    if (!left && libraryIds.length) setLeft(libraryIds[0])
-    if (!right && libraryIds.length > 1) setRight(libraryIds[1])
-  }, [libraryIds, left, right])
+    const next = comparisonLibraries.filter((id) => libraryIds.includes(id)).slice(0, 2)
+    for (const id of libraryIds) {
+      if (next.length >= 2) break
+      if (!next.includes(id)) next.push(id)
+    }
+    if (next.join("\u0000") !== comparisonLibraries.join("\u0000")) onComparisonChange(next)
+  }, [libraryIds, comparisonLibraries, onComparisonChange])
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
@@ -161,9 +165,9 @@ export function LibraryComparison({ records = [], warnings = [], onOpenLibrary }
   return <section className="analysis-page">
     <div className="explorer-hero"><div><span className="kicker">COMPARE LIBRARIES</span><h1>Profile comparison</h1><p>Compare relative taxon composition and damage side by side.</p></div></div>
     <div className="panel compare-controls">
-      <label className="filter-field"><span>Library A</span><div className="select-wrap"><select value={left} onChange={(event) => setLeft(event.target.value)}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
+      <label className="filter-field"><span>Library A</span><div className="select-wrap"><select value={left} onChange={(event) => onComparisonChange([event.target.value, right].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <span className="compare-vs"><GitCompareArrows size={18} />VS</span>
-      <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => setRight(event.target.value)}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
+      <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => onComparisonChange([left, event.target.value].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronDown, CornerUpLeft, Search, Sparkles } from 'lucide-react'
+import { AlertTriangle, ChevronDown, CornerUpLeft, GitCompareArrows, Search, Sparkles, X } from 'lucide-react'
 
 const PALETTE = ['#20b884', '#6d8ee8', '#f0ad3d', '#9b72d4', '#e06d5d', '#46a8b6', '#88b84c']
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
@@ -90,7 +90,7 @@ function Sunburst({ tree, focusPath, onFocus }) {
   </div>
 }
 
-export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary }) {
+export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -149,6 +149,12 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
           <div><span>Assigned reads</span><b>{filtered.reduce((sum, row) => sum + row.reads, 0).toLocaleString()}</b></div>
           <div><span>Taxa shown</span><b>{filtered.length}</b></div>
           <div className={libraryWarnings.length ? 'summary-warning' : ''}><span>Warnings</span><b>{libraryWarnings.length}</b></div>
+        </div>
+
+        <div className="library-compare-tray panel">
+          <div className="compare-tray-intro"><span><GitCompareArrows size={17} /></span><div><b>Compare library profiles</b><small>Add this library as A or B, then open the synchronized comparison.</small></div></div>
+          <div className="compare-tray-slots">{comparisonLibraries.map((libraryId, index) => <span key={libraryId}><i>{index === 0 ? "A" : "B"}</i><b>{libraryId}</b><button onClick={() => onRemoveFromComparison(libraryId)} aria-label={"Remove " + libraryId + " from comparison"}><X size={12} /></button></span>)}{comparisonLibraries.length < 2 && <em>{comparisonLibraries.length ? "Library B is empty" : "Both comparison slots are empty"}</em>}</div>
+          <div className="compare-tray-actions"><button className="secondary" disabled={comparisonLibraries.includes(selectedLibrary)} onClick={() => onAddToComparison(selectedLibrary)}>{comparisonLibraries.includes(selectedLibrary) ? "Added" : comparisonLibraries.length >= 2 ? "Replace oldest" : comparisonLibraries.length === 0 ? "Add as library A" : "Add as library B"}</button>{comparisonLibraries.length === 2 && <button className="compare-now" onClick={onOpenComparison}>Compare now<GitCompareArrows size={14} /></button>}</div>
         </div>
 
         <article className={`library-warning-guide panel ${libraryWarnings.length ? "flagged" : "clear"}`}>

@@ -15,7 +15,9 @@ Explorer explains the warning baseline and shows each flagged group's observed
 reads, threshold, fold change, and leading taxon. The Krona-style hierarchy
 provides detailed lineage values on hover. The PCoA tab
 uses Bray-Curtis distances of relative genus abundance and supports a minimum
-mean-A filter. Dedicated tabs provide taxon recurrence, two-library comparison,
+mean-A filter. Library Explorer includes a persistent two-slot comparison tray synchronized with
+the Compare Libraries tab. Dedicated tabs provide taxon recurrence, two-library
+comparison,
 damage/A distributions, and run/batch QC grouped by control date, run,
 flowcell, machine, or project.
 

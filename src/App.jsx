@@ -52,6 +52,7 @@ function App() {
   const [activeTab, setActiveTab] = useState("overview")
   const [selectedLibrary, setSelectedLibrary] = useState("")
   const [peakMonth, setPeakMonth] = useState("")
+  const [comparisonLibraries, setComparisonLibraries] = useState([])
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
@@ -157,6 +158,9 @@ function App() {
     setMinReads(''); setMinA(''); setFrom(''); setTo('')
   }
 
+  const addToComparison = (libraryId) => setComparisonLibraries((current) => current.includes(libraryId) ? current : current.length < 2 ? [...current, libraryId] : [current[1], libraryId])
+  const removeFromComparison = (libraryId) => setComparisonLibraries((current) => current.filter((id) => id !== libraryId))
+
   const exportCsv = () => {
     const header = 'month,control_type,kingdom,pipeline,taxon,reads,libraries,mean_A\n'
     const body = filtered.map((row) => [row.month, row.controlType, row.kingdom, row.pipeline, row.name, row.reads, row.libraries, row.meanA ?? ''].map((value) => `"${String(value).replaceAll('"', '""')}"`).join(',')).join('\n')
@@ -253,10 +257,10 @@ function App() {
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} />
           : <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />}
 
