@@ -253,7 +253,7 @@ function App() {
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />

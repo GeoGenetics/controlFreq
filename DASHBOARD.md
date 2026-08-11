@@ -9,8 +9,11 @@ and pipeline, plus compact per-library genus lineages and run metadata. The
 dashboard filters these summaries by taxon, assigned reads, mean A, control,
 kingdom, pipeline, and date.
 
-Warning library IDs and monthly read-volume points open library drill-downs. The
-Krona-style hierarchy provides detailed lineage values on hover. The PCoA tab
+Warning library IDs and monthly read-volume points open library drill-downs.
+The Library
+Explorer explains the warning baseline and shows each flagged group's observed
+reads, threshold, fold change, and leading taxon. The Krona-style hierarchy
+provides detailed lineage values on hover. The PCoA tab
 uses Bray-Curtis distances of relative genus abundance and supports a minimum
 mean-A filter. Dedicated tabs provide taxon recurrence, two-library comparison,
 damage/A distributions, and run/batch QC grouped by control date, run,
