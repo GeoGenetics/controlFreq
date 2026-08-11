@@ -18,6 +18,10 @@ comparison tray, and shows detailed lineage values on Krona hover. The PCoA tab
 uses Bray-Curtis distances of relative genus abundance. Dedicated tabs provide
 taxon recurrence, library comparison, damage/A distributions, run/batch QC, and
 a co-occurrence network based on library co-presence and Jaccard similarity.
+The Taxa Landscape tab plots prevalence across eligible libraries against mean
+relative abundance when detected. Point size represents total reads, filters
+cover control type, pipeline, kingdom, reads, and prevalence, and clicking a
+point opens Taxon Explorer.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
 log-scaled colour intensity. Library warnings use total genus-level reads and

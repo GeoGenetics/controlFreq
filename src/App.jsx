@@ -12,7 +12,7 @@ import { fallbackData } from './data.js'
 import LibraryExplorer from "./LibraryExplorer.jsx"
 import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
-import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
+import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, PrevalenceExplorer, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -180,6 +180,7 @@ function App() {
           <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
           <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => setActiveTab("pcoa")}><ChartScatter size={18} />PCoA</button>
           <button className={activeTab === "taxon" ? "active" : ""} onClick={() => setActiveTab("taxon")}><Search size={18} />Taxon explorer</button>
+          <button className={activeTab === "prevalence" ? "active" : ""} onClick={() => setActiveTab("prevalence")}><ChartScatter size={18} />Taxa landscape</button>
           <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
           <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
@@ -263,6 +264,7 @@ function App() {
         </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onOpenTaxon={openTaxon} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
           : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
           : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />

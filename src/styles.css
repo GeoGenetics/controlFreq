@@ -469,3 +469,22 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .network-canvas { height: 480px; overflow-x: auto; }
   .network-canvas svg { min-width: 650px; }
 }
+.landscape-filters { grid-template-columns: repeat(5, minmax(135px, 1fr)); }
+.landscape-panel { overflow: hidden; }
+.landscape-chart { height: 590px; padding: 0 16px 12px 4px; }
+.landscape-legend { align-self: center; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 13px; color: #78867f; font-size: 9px; }
+.landscape-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.landscape-legend i { width: 8px; height: 8px; border-radius: 50%; box-shadow: 0 0 0 2px white, 0 0 0 3px #dfe5e2; }
+.landscape-points { cursor: pointer; }
+.landscape-tooltip small { color: #adbbb5; font-size: 9px; }
+.landscape-tooltip em { margin-top: 3px; color: #6ee0b4; font-size: 9px; font-style: normal; }
+
+@media (max-width: 1050px) {
+  .landscape-filters { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .landscape-filters { grid-template-columns: 1fr 1fr; }
+  .landscape-chart { height: 500px; min-width: 650px; }
+  .landscape-panel { overflow-x: auto; }
+  .landscape-legend { justify-content: flex-start; }
+}

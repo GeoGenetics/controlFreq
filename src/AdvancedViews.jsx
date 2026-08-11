@@ -4,8 +4,8 @@ import {
   Search, ShieldAlert, TestTubes,
 } from 'lucide-react'
 import {
-  Bar, BarChart, CartesianGrid, Cell, Line, LineChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Cell, Line, LineChart, ReferenceLine,
+  ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis,
 } from 'recharts'
 
 const COLORS = {
@@ -34,6 +34,85 @@ function TaxonATooltip({ active, payload, label }) {
   return <div className="chart-tooltip"><b>{monthLabel(label)}</b><div>Reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? "—" : point.meanA.toFixed(3)}</span></div></div>
 }
 
+function PrevalenceTooltip({ active, payload }) {
+  const point = payload?.[0]?.payload
+  if (!active || !point) return null
+  return <div className="chart-tooltip landscape-tooltip"><b>{point.name}</b><small>{point.kingdom}</small><div>Prevalence<span>{point.prevalence.toFixed(1)}%</span></div><div>Mean relative abundance<span>{point.meanAbundance.toFixed(3)}%</span></div><div>Detected in<span>{point.detectedLibraries} of {point.eligibleLibraries} libraries</span></div><div>Total reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? '—' : point.meanA.toFixed(3)}</span></div><em>Click to open Taxon Explorer</em></div>
+}
+
+export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
+  const [controlType, setControlType] = useState('All')
+  const [pipeline, setPipeline] = useState('All')
+  const [kingdom, setKingdom] = useState('All')
+  const [minReads, setMinReads] = useState('50')
+  const [minPrevalence, setMinPrevalence] = useState('0')
+  const dimensions = useMemo(() => ({
+    controlTypes: [...new Set(records.map((row) => row.controlType))].sort(),
+    pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
+    kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
+  }), [records])
+
+  const analysis = useMemo(() => {
+    const baseRows = records.filter((row) =>
+      (controlType === 'All' || row.controlType === controlType) &&
+      (pipeline === 'All' || row.pipeline === pipeline))
+    const libraryTotals = new Map()
+    for (const row of baseRows) libraryTotals.set(row.libraryId, (libraryTotals.get(row.libraryId) || 0) + row.reads)
+    const groups = new Map()
+    for (const row of baseRows) {
+      if (kingdom !== 'All' && row.kingdom !== kingdom) continue
+      const key = row.kingdom + '\u0000' + row.name
+      const item = groups.get(key) || { name: row.name, kingdom: row.kingdom, reads: 0, aSum: 0, aReads: 0, libraries: new Map() }
+      item.reads += row.reads
+      item.libraries.set(row.libraryId, (item.libraries.get(row.libraryId) || 0) + row.reads)
+      if (row.meanA !== null) { item.aSum += row.meanA * row.reads; item.aReads += row.reads }
+      groups.set(key, item)
+    }
+    const eligibleLibraries = libraryTotals.size
+    const readThreshold = Number(minReads) || 0
+    const prevalenceThreshold = Number(minPrevalence) || 0
+    const points = [...groups.values()].map((item) => {
+      const detectedLibraries = item.libraries.size
+      const prevalence = eligibleLibraries ? detectedLibraries / eligibleLibraries * 100 : 0
+      const meanAbundance = detectedLibraries ? [...item.libraries].reduce((sum, [libraryId, reads]) => sum + reads / (libraryTotals.get(libraryId) || 1), 0) / detectedLibraries * 100 : 0
+      return { ...item, eligibleLibraries, detectedLibraries, prevalence, meanAbundance, logAbundance: Math.log10(Math.max(meanAbundance, .000001)), meanA: item.aReads ? item.aSum / item.aReads : null }
+    }).filter((item) => item.reads >= readThreshold && item.prevalence >= prevalenceThreshold && item.meanAbundance > 0)
+      .sort((a, b) => b.reads - a.reads)
+    const abundanceValues = points.map((item) => item.logAbundance).sort((a, b) => a - b)
+    const medianLogAbundance = abundanceValues.length ? abundanceValues[Math.floor(abundanceValues.length / 2)] : 0
+    return { eligibleLibraries, points, medianLogAbundance }
+  }, [records, controlType, pipeline, kingdom, minReads, minPrevalence])
+
+  const byKingdom = Object.fromEntries(dimensions.kingdoms.map((name) => [name, analysis.points.filter((item) => item.kingdom === name)]))
+  const recurring = analysis.points.filter((item) => item.prevalence >= 50).length
+  const dominant = analysis.points.filter((item) => item.logAbundance >= analysis.medianLogAbundance && item.prevalence >= 50).length
+  const yTick = (value) => {
+    const percent = 10 ** value
+    return percent >= 1 ? percent.toFixed(0) + '%' : percent.toPrecision(1) + '%'
+  }
+
+  return <section className="analysis-page">
+    <div className="explorer-hero"><div><span className="kicker">TAXA LANDSCAPE</span><h1>Prevalence vs abundance</h1><p>Separate recurring background taxa from rare, high-volume signals.</p></div></div>
+    <div className="panel explorer-filters landscape-filters">
+      <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
+      <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
+      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum total reads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum prevalence (%)</span><input type="number" min="0" max="100" step="1" value={minPrevalence} onChange={(event) => setMinPrevalence(event.target.value)} /></label>
+    </div>
+    <MetricStrip items={[
+      { label: 'Eligible libraries', value: analysis.eligibleLibraries, detail: 'Prevalence denominator' },
+      { label: 'Taxa shown', value: analysis.points.length, detail: 'After filters' },
+      { label: 'Recurring taxa', value: recurring, detail: 'In at least 50% of libraries' },
+      { label: 'Common + abundant', value: dominant, detail: 'Upper-right region' },
+    ]} />
+    <article className="panel landscape-panel">
+      <div className="panel-head"><div><span className="kicker">TAXON DISTRIBUTION</span><h2>Detection frequency and signal strength</h2><p>Abundance is the mean within-library read proportion when detected; point area represents total reads</p></div><div className="landscape-legend">{dimensions.kingdoms.filter((name) => kingdom === 'All' || kingdom === name).map((name) => <span key={name}><i style={{ background: COLORS[name] || '#84978e' }} />{name}</span>)}</div></div>
+      {analysis.points.length ? <div className="landscape-chart"><ResponsiveContainer width="100%" height="100%"><ScatterChart margin={{ top: 18, right: 28, bottom: 25, left: 18 }}><CartesianGrid stroke="#e8ece9" strokeDasharray="3 3" /><XAxis type="number" dataKey="prevalence" name="Prevalence" domain={[0, 100]} unit="%" tickLine={false} axisLine={false} label={{ value: 'Prevalence across eligible libraries (%)', position: 'bottom', offset: 10, fill: '#73817a', fontSize: 10 }} /><YAxis type="number" dataKey="logAbundance" name="Mean relative abundance" tickFormatter={yTick} tickLine={false} axisLine={false} width={50} label={{ value: 'Mean relative abundance when detected', angle: -90, position: 'insideLeft', offset: 3, fill: '#73817a', fontSize: 10 }} /><ZAxis type="number" dataKey="reads" range={[45, 500]} /><ReferenceLine x={50} stroke="#9ba8a2" strokeDasharray="5 5" /><ReferenceLine y={analysis.medianLogAbundance} stroke="#9ba8a2" strokeDasharray="5 5" /><Tooltip content={<PrevalenceTooltip />} cursor={{ strokeDasharray: '3 3' }} />{dimensions.kingdoms.map((name) => byKingdom[name]?.length ? <Scatter key={name} name={name} data={byKingdom[name]} fill={COLORS[name] || '#84978e'} fillOpacity={.78} stroke="#fff" strokeWidth={1} onClick={(point) => onOpenTaxon(point?.payload?.name || point?.name)} className="landscape-points" /> : null)}</ScatterChart></ResponsiveContainer></div> : <div className="analysis-empty tall">No taxa match these filters.</div>}
+    </article>
+    <p className="analysis-method-note">The vertical guide marks 50% prevalence; the horizontal guide is the median abundance among visible taxa. Relative abundance is calculated against all assigned taxon reads in each eligible library. Click any point to inspect that taxon.</p>
+  </section>
+}
 export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "", onSelectTaxon, onOpenLibrary }) {
   const taxon = selectedTaxon
   const [pipeline, setPipeline] = useState('All')
