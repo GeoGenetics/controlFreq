@@ -5,15 +5,16 @@ The dashboard is a Vite/React application that reads a compact summary of a cont
 ## Dashboard features
 
 The generated JSON retains monthly summaries by taxon, control type, kingdom,
-and pipeline, plus compact per-library genus lineages for the Library explorer.
-Warning library IDs open that explorer directly. Its Krona-style hierarchy
-supports pipeline, kingdom, minimum nreads, and minimum A filters, with detailed
-lineage values on hover. Monthly read-volume points open a library contribution
-breakdown. The PCoA tab uses Bray-Curtis distances of relative genus abundance
-and links every library point back to the taxonomy explorer. The dashboard
-can filter these summaries by taxon name, minimum
-assigned reads, and minimum read-weighted mean `A`, as well as the original
-control, kingdom, pipeline, and date filters.
+and pipeline, plus compact per-library genus lineages and run metadata. The
+dashboard filters these summaries by taxon, assigned reads, mean A, control,
+kingdom, pipeline, and date.
+
+Warning library IDs and monthly read-volume points open library drill-downs. The
+Krona-style hierarchy provides detailed lineage values on hover. The PCoA tab
+uses Bray-Curtis distances of relative genus abundance and supports a minimum
+mean-A filter. Dedicated tabs provide taxon recurrence, two-library comparison,
+damage/A distributions, and run/batch QC grouped by control date, run,
+flowcell, machine, or project.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
 log-scaled colour intensity. Library warnings use total genus-level reads and

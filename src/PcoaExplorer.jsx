@@ -107,6 +107,7 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
   const [kingdom, setKingdom] = useState('All')
   const [controlType, setControlType] = useState('All')
   const [minimumReads, setMinimumReads] = useState('0')
+  const [minimumA, setMinimumA] = useState("")
 
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
@@ -117,8 +118,9 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
   const rows = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (kingdom === 'All' || row.kingdom === kingdom) &&
-    (controlType === 'All' || row.controlType === controlType)
-  ), [records, pipeline, kingdom, controlType])
+    (controlType === 'All' || row.controlType === controlType) &&
+    (minimumA === "" || (row.meanA !== null && row.meanA >= Number(minimumA)))
+  ), [records, pipeline, kingdom, controlType, minimumA])
   const result = useMemo(() => calculatePcoa(rows, Number(minimumReads) || 0), [rows, minimumReads])
   const points = result.points.map((point) => ({ ...point, warning: warningIds.has(point.libraryId) }))
   const controlTypes = [...new Set(points.map((point) => point.controlType))]
@@ -135,6 +137,7 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <label className="filter-field"><span>Minimum library reads</span><input type="number" min="0" step="100" value={minimumReads} onChange={(event) => setMinimumReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
 
     <article className="panel pcoa-panel">

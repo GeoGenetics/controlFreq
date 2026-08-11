@@ -21,6 +21,10 @@ def classify(row):
     return "Other Eukaryote"
 
 
+def clean(value):
+    return "" if value in (None, "NA") else value
+
+
 def number(value):
     try:
         parsed = float(value)
@@ -78,6 +82,7 @@ def main():
     library_taxon_groups = defaultdict(
         lambda: {"reads": 0, "aSum": 0.0, "aReads": 0}
     )
+    library_metadata = {}
     taxa_reads = defaultdict(int)
     taxa_months = defaultdict(lambda: defaultdict(int))
 
@@ -104,6 +109,19 @@ def main():
             control_type = ctype.replace("_", " ")
             library_id = row.get("library_id", "")
             taxon = row.get("name") or "Unknown"
+            if library_id and library_id not in library_metadata:
+                library_metadata[library_id] = {
+                    "libraryId": library_id,
+                    "controlId": clean(row.get("control_id")),
+                    "date": date,
+                    "month": month,
+                    "controlType": control_type,
+                    "flowcell": clean(row.get("flowcell")),
+                    "flowcellPosition": clean(row.get("results_flowcell_pos") or row.get("fastq_flowcell_pos")),
+                    "machine": clean(row.get("fastq_machine")),
+                    "runNumber": clean(row.get("fastq_run_n")),
+                    "project": clean(row.get("fastq_project")),
+                }
             key = (month, control_type, kingdom, pipeline)
 
             reads_by_group[key] += reads
@@ -253,6 +271,7 @@ def main():
         "taxa": taxa,
         "taxonRecords": taxon_records,
         "libraryTaxonRecords": library_taxon_records,
+        "libraryMetadata": [library_metadata[key] for key in sorted(library_metadata)],
         "libraryWarnings": sorted(
             library_warnings, key=lambda row: row["reads"], reverse=True
         ),
@@ -267,7 +286,8 @@ def main():
     )
     print(
         f"Wrote {len(records)} observations, {len(taxon_records)} taxon groups, "
-        f"{len(library_taxon_records)} library taxa, and "
+        f"{len(library_taxon_records)} library taxa, "
+        f"{len(library_metadata)} library metadata rows, and "
         f"{len(library_warnings)} library warnings to {args.output}"
     )
 

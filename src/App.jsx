@@ -12,6 +12,7 @@ import { fallbackData } from './data.js'
 import LibraryExplorer from "./LibraryExplorer.jsx"
 import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
+import { DamageExplorer, LibraryComparison, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
@@ -172,6 +173,10 @@ function App() {
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
           <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
           <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => setActiveTab("pcoa")}><ChartScatter size={18} />PCoA</button>
+          <button className={activeTab === "taxon" ? "active" : ""} onClick={() => setActiveTab("taxon")}><Search size={18} />Taxon explorer</button>
+          <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
+          <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
+          <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
           {activeTab === "overview" && <>
             <small>SECTIONS</small>
             <a href="#trends"><Activity size={18} />Contamination</a>
@@ -248,7 +253,12 @@ function App() {
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} /> : <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />}
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} />
+          : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} />
+          : <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />}
 
         <PeakLibraries month={peakMonth} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={() => setPeakMonth("")} onOpenLibrary={(libraryId) => { setPeakMonth(""); setSelectedLibrary(libraryId); setActiveTab("library") }} />
 
