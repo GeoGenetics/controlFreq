@@ -50,7 +50,7 @@ function App() {
   const [selectedLibrary, setSelectedLibrary] = useState("")
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}dashboard-data.json`)
+    fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
       .then((response) => { if (!response.ok) throw new Error('No generated data'); return response.json() })
       .then(setData).catch(() => {})
   }, [])
