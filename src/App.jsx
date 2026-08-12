@@ -60,6 +60,13 @@ function EmptyState({ title = 'No matching data', detail = 'Try widening the fil
   return <div className="empty"><AlertTriangle size={20} /><b>{title}</b><span>{detail}</span></div>
 }
 
+function RecentChangeColumn({ title, detail, tone, items, kind, onOpenTaxon }) {
+  const value = (item) => kind === 'new' ? formatNumber(item.latest) + ' reads'
+    : kind === 'gone' ? formatNumber(item.previous) + ' before'
+      : (item.delta > 0 ? '+' : '−') + formatNumber(Math.abs(item.delta))
+  return <article className={'recent-change-column ' + tone}><header><b>{title}</b><span>{detail}</span></header><div>{items.map((item) => <div key={item.kingdom + '-' + item.name}><i style={{ background: COLORS[item.kingdom] }} /><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button><span><b>{value(item)}</b>{item.percent !== null && kind !== 'new' && kind !== 'gone' && <small>{item.percent > 0 ? '+' : ''}{item.percent.toFixed(1)}%</small>}</span></div>)}{!items.length && <p>No matching taxa</p>}</div></article>
+}
+
 function App() {
   const [data, setData] = useState(fallbackData)
   const [controlType, setControlType] = useState('All')
@@ -124,6 +131,34 @@ function App() {
     return {
       timeline: [...months.values()].sort((a, b) => a.month.localeCompare(b.month)),
       composition: [...kingdoms].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+    }
+  }, [filtered])
+
+  const recentChanges = useMemo(() => {
+    const months = [...new Set(filtered.map((row) => row.month))].sort()
+    const latestMonth = months.at(-1)
+    const previousMonth = months.at(-2)
+    if (!latestMonth || !previousMonth) return { latestMonth, previousMonth, newTaxa: [], goneTaxa: [], rising: [], falling: [] }
+    const groups = new Map()
+    for (const row of filtered) {
+      if (row.month !== latestMonth && row.month !== previousMonth) continue
+      const key = row.kingdom + '\u0000' + row.name
+      const item = groups.get(key) || { name: row.name, kingdom: row.kingdom, previous: 0, latest: 0 }
+      if (row.month === latestMonth) item.latest += row.reads
+      else item.previous += row.reads
+      groups.set(key, item)
+    }
+    const items = [...groups.values()].map((item) => ({
+      ...item,
+      delta: item.latest - item.previous,
+      percent: item.previous ? (item.latest - item.previous) / item.previous * 100 : null,
+    }))
+    return {
+      latestMonth, previousMonth,
+      newTaxa: items.filter((item) => !item.previous && item.latest).sort((a, b) => b.latest - a.latest).slice(0, 5),
+      goneTaxa: items.filter((item) => item.previous && !item.latest).sort((a, b) => b.previous - a.previous).slice(0, 5),
+      rising: items.filter((item) => item.previous && item.latest && item.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
+      falling: items.filter((item) => item.previous && item.latest && item.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
     }
   }, [filtered])
 
@@ -257,7 +292,7 @@ function App() {
 
         <PageGuide items={[
           { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Minimum nreads starts at 50 and stays synchronized with the other analysis tabs.' },
-          { title: 'Read the patterns', text: 'The timeline shows when read volume changes; the viridis heatmap shows which taxa drive those changes. Click either view to see the contributing libraries.' },
+          { title: 'Read the patterns', text: 'Recent Changes compares the newest two matching months. The timeline shows longer-term volume and the viridis heatmap shows which taxa drive it; click taxon names or chart cells to investigate.' },
           { title: 'Read the summary cards', text: 'Peak libraries is the largest distinct-library count behind one visible taxon, month, control-type, kingdom, and pipeline result. Latest load sums all visible assigned reads in the newest matching month.' },
         ]} />
 
@@ -283,6 +318,17 @@ function App() {
           <MetricCard title="Taxa represented" value={taxa.length} detail="After all filters" icon={Sparkles} tone="amber" />
           <MetricCard title="Latest load" value={formatNumber(latestTotal)} detail={latest ? `Total reads in ${prettyDate(latest.month)}` : 'No matching data'} icon={Activity} tone="blue" />
           <MetricCard title="Flagged libraries" value={flaggedLibraries} detail="Above robust baseline" icon={AlertTriangle} tone={flaggedLibraries ? 'red' : 'green'} />
+        </section>
+
+        <section className="panel recent-changes-panel">
+          <div className="panel-head"><div><span className="kicker">RECENT CHANGES</span><h2>What changed in the newest matching month?</h2><p>{recentChanges.previousMonth && recentChanges.latestMonth ? prettyDate(recentChanges.latestMonth) + ' versus ' + prettyDate(recentChanges.previousMonth) : 'Choose a range containing at least two matching months'}</p></div><span className="recent-change-note">After active filters</span></div>
+          {recentChanges.previousMonth ? <div className="recent-change-grid">
+            <RecentChangeColumn title="Newly detected" detail="Absent in previous month" tone="new" kind="new" items={recentChanges.newTaxa} onOpenTaxon={openTaxon} />
+            <RecentChangeColumn title="Biggest increases" detail="Ranked by added reads" tone="rising" kind="rising" items={recentChanges.rising} onOpenTaxon={openTaxon} />
+            <RecentChangeColumn title="Biggest decreases" detail="Ranked by lost reads" tone="falling" kind="falling" items={recentChanges.falling} onOpenTaxon={openTaxon} />
+            <RecentChangeColumn title="No longer detected" detail="Absent in latest month" tone="gone" kind="gone" items={recentChanges.goneTaxa} onOpenTaxon={openTaxon} />
+          </div> : <EmptyState title="Two months are needed" detail="Widen the date or other filters to compare recent changes." />}
+          <p className="recent-change-footnote">“Newly” and “no longer” mean present or absent after the active filters; they do not prove biological arrival or disappearance.</p>
         </section>
 
         <section className="chart-grid" id="trends">

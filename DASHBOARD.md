@@ -20,6 +20,11 @@ across every relevant tab while the dashboard is open.
 Monthly read-volume points open library drill-downs. Peak libraries is the
 largest library count contributing to any one visible taxon/month summary;
 latest load is the total visible read count in the newest matching month.
+The Overview Recent Changes panel compares the newest two matching months and
+lists newly detected taxa, the largest read increases and decreases, and taxa
+no longer detected. Taxon names link directly to Taxon Explorer. Presence and
+absence in this panel are calculated after the active filters, so they are not
+claims of biological arrival or disappearance.
 Taxon names throughout the dashboard open Taxon Explorer. Hovering or keyboard-
 focusing a taxon text link opens a delayed, cached Wikipedia preview; analytical
 plot and Krona tooltips retain their sequencing-specific information. Its

@@ -594,6 +594,25 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .wiki-hover-state { min-height: 42px; display: flex; align-items: center; gap: 7px; color: #718078; font-size: 10px; }
 .wiki-hover-state b { display: inline; font: inherit; font-weight: 700; }
 
+.recent-changes-panel { margin-bottom: 15px; overflow: hidden; }
+.recent-change-note { align-self: center; padding: 5px 8px; border-radius: 12px; background: #f0f5f2; color: #718078; font-size: 9px; font-weight: 700; }
+.recent-change-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.recent-change-column { min-width: 0; border-left: 1px solid #edf1ee; border-top: 3px solid #cad7d1; }
+.recent-change-column:first-child { border-left: 0; }
+.recent-change-column.new { border-top-color: #6659bd; }.recent-change-column.rising { border-top-color: #20a97b; }.recent-change-column.falling { border-top-color: #e09b32; }.recent-change-column.gone { border-top-color: #d06459; }
+.recent-change-column header { min-height: 58px; padding: 12px 15px; border-bottom: 1px solid #eff2f0; display: flex; flex-direction: column; gap: 3px; }
+.recent-change-column header b { color: #263a30; font: 700 11px Manrope; }
+.recent-change-column header span { color: #8b9791; font-size: 9px; }
+.recent-change-column > div > div { min-height: 41px; padding: 8px 14px; border-top: 1px solid #f0f3f1; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 7px; }
+.recent-change-column > div > div:first-child { border-top: 0; }
+.recent-change-column > div > div > i { width: 7px; height: 7px; border-radius: 50%; }
+.recent-change-column .taxon-link { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.recent-change-column > div > div > span { display: flex; flex-direction: column; align-items: flex-end; color: #526159; }
+.recent-change-column > div > div > span b { font-size: 10px; white-space: nowrap; }
+.recent-change-column > div > div > span small { color: #929e98; font-size: 8px; }
+.recent-change-column > div > p { min-height: 80px; margin: 0; display: grid; place-items: center; color: #9aa59f; font-size: 9px; }
+.recent-change-footnote { margin: 0; padding: 9px 15px; border-top: 1px solid #edf1ee; background: #fafbfa; color: #89968f; font-size: 9px; }
+
 .overview-taxa-only { grid-template-columns: minmax(0, 1fr); }
 .warning-page { min-height: calc(100vh - 95px); }
 .warning-count.large { width: auto; min-width: 58px; padding: 0 12px; display: flex; gap: 6px; align-items: center; justify-content: center; }
@@ -614,6 +633,11 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .warning-table-scroll td:nth-child(3) { min-width: 130px; }
 .warning-baseline { display: block; margin-top: 3px; color: #96a29c; font-size: 9px; }
 
+@media (max-width: 1100px) {
+  .recent-change-grid { grid-template-columns: 1fr 1fr; }
+  .recent-change-column:nth-child(3) { border-left: 0; }
+}
+
 @media (max-width: 1200px) {
   .warning-filters { grid-template-columns: repeat(4, minmax(130px, 1fr)); }
 }
@@ -623,4 +647,6 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .control-type-legend { justify-content: flex-start; }
   .warning-filters { grid-template-columns: 1fr 1fr; }
   .warning-metrics { grid-template-columns: 1fr 1fr; }
+  .recent-change-grid { grid-template-columns: 1fr; }
+  .recent-change-column { border-left: 0; }
 }
