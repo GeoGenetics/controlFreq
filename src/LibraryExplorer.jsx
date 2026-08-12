@@ -92,11 +92,10 @@ function Sunburst({ tree, focusPath, onFocus, onOpenTaxon }) {
   </div>
 }
 
-export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
+export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, minReads, onMinReadsChange, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
-  const [minReads, setMinReads] = useState('')
   const [minA, setMinA] = useState('')
   const [focusPath, setFocusPath] = useState([])
 
@@ -217,7 +216,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
         <div className="panel explorer-filters">
           <SelectFilter label="Pipeline" value={pipeline} options={pipelines} onChange={setPipeline} />
           <SelectFilter label="Kingdom" value={kingdom} options={kingdoms} onChange={setKingdom} />
-          <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+          <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
           <label className="filter-field"><span>Minimum A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
         </div>
 

@@ -5,14 +5,15 @@ The dashboard is a Vite/React application that reads a compact summary of a cont
 ## Dashboard features
 
 Navigation is grouped into Monitor, Libraries, Taxa, and Quality so related
-analyses stay together. Every main tab includes an open-by-default,
+analyses stay together, without a second Overview section-link group. Every main tab includes an open-by-default,
 plain-language guide explaining what the page compares, how to read its
 visuals, and where clicks lead; the guide can be collapsed at any time.
 
 The generated JSON retains monthly summaries by taxon, control type, kingdom,
 and pipeline, plus compact per-library genus lineages and run metadata. The
 dashboard filters these summaries by taxon, assigned reads, mean A, control,
-kingdom, pipeline, and date.
+kingdom, pipeline, and date. Minimum nreads defaults to 50 and is synchronized
+across every relevant tab while the dashboard is open.
 
 Warning library IDs and monthly read-volume points open library drill-downs.
 Taxon names throughout the dashboard open Taxon Explorer. Its recurrence chart
@@ -36,12 +37,15 @@ point opens Taxon Explorer. Taxon Explorer also loads an optional Wikipedia
 summary and image using the normalized taxon name, with clear external attribution.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
-log-scaled colour intensity. Date headings open all matching libraries, taxon
+a log-scaled viridis colour scale. Date headings open all matching libraries, taxon
 labels open Taxon Explorer, and populated cells open the matching month/taxon
 library list before drilling into the selected library's Krona view. Library warnings use total genus-level reads and
 flag values above the median plus three scaled median absolute deviations
 within each control type, kingdom, and pipeline group. At least four libraries
-are required to establish a baseline, and warnings are shown newest-first.
+are required to establish a baseline, and warnings are shown newest-first in a
+taller scrolling list. The Overview contaminant table supports sorting by every
+column; its trend is the percent read-count change from the previous to the
+latest matching month.
 Minimum mean A filtering is available on
 all analysis tabs where taxon-level A values can meaningfully restrict results.
 

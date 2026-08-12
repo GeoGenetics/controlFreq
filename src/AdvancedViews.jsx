@@ -50,11 +50,10 @@ function PrevalenceTooltip({ active, payload }) {
   return <div className="chart-tooltip landscape-tooltip"><b>{point.name}</b><small>{point.kingdom}</small><div>Prevalence<span>{point.prevalence.toFixed(1)}%</span></div><div>Mean relative abundance<span>{point.meanAbundance.toFixed(3)}%</span></div><div>Detected in<span>{point.detectedLibraries} of {point.eligibleLibraries} libraries</span></div><div>Total reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? '—' : point.meanA.toFixed(3)}</span></div><em>Click to open Taxon Explorer</em></div>
 }
 
-export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
+export function PrevalenceExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [controlType, setControlType] = useState('All')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
-  const [minReads, setMinReads] = useState('50')
   const [minPrevalence, setMinPrevalence] = useState('0')
   const [minimumA, setMinimumA] = useState('')
   const dimensions = useMemo(() => ({
@@ -66,7 +65,8 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
   const analysis = useMemo(() => {
     const baseRows = records.filter((row) =>
       (controlType === 'All' || row.controlType === controlType) &&
-      (pipeline === 'All' || row.pipeline === pipeline))
+      (pipeline === 'All' || row.pipeline === pipeline) &&
+      row.reads >= (Number(minReads) || 0))
     const libraryTotals = new Map()
     for (const row of baseRows) libraryTotals.set(row.libraryId, (libraryTotals.get(row.libraryId) || 0) + row.reads)
     const groups = new Map()
@@ -82,14 +82,13 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
       groups.set(key, item)
     }
     const eligibleLibraries = libraryTotals.size
-    const readThreshold = Number(minReads) || 0
     const prevalenceThreshold = Number(minPrevalence) || 0
     const points = [...groups.values()].map((item) => {
       const detectedLibraries = item.libraries.size
       const prevalence = eligibleLibraries ? detectedLibraries / eligibleLibraries * 100 : 0
       const meanAbundance = detectedLibraries ? [...item.libraries].reduce((sum, [libraryId, reads]) => sum + reads / (libraryTotals.get(libraryId) || 1), 0) / detectedLibraries * 100 : 0
       return { ...item, eligibleLibraries, detectedLibraries, prevalence, meanAbundance, logAbundance: Math.log10(Math.max(meanAbundance, .000001)), meanA: item.aReads ? item.aSum / item.aReads : null }
-    }).filter((item) => item.reads >= readThreshold && item.prevalence >= prevalenceThreshold && item.meanAbundance > 0)
+    }).filter((item) => item.prevalence >= prevalenceThreshold && item.meanAbundance > 0)
       .sort((a, b) => b.reads - a.reads)
     const abundanceValues = points.map((item) => item.logAbundance).sort((a, b) => a - b)
     const medianLogAbundance = abundanceValues.length ? abundanceValues[Math.floor(abundanceValues.length / 2)] : 0
@@ -115,7 +114,7 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
-      <label className="filter-field"><span>Minimum total reads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum prevalence (%)</span><input type="number" min="0" max="100" step="1" value={minPrevalence} onChange={(event) => setMinPrevalence(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
@@ -132,11 +131,10 @@ export function PrevalenceExplorer({ records = [], onOpenTaxon }) {
     <p className="analysis-method-note">The vertical guide marks 50% prevalence; the horizontal guide is the median abundance among visible taxa. Relative abundance is calculated against all assigned taxon reads in each eligible library. Click any point to inspect that taxon.</p>
   </section>
 }
-export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "", onSelectTaxon, onOpenLibrary }) {
+export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "", minReads, onMinReadsChange, onSelectTaxon, onOpenLibrary }) {
   const taxon = selectedTaxon
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
-  const [minReads, setMinReads] = useState('')
   const [minA, setMinA] = useState('')
   const [wiki, setWiki] = useState({ status: 'idle' })
 
@@ -237,7 +235,7 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
     <div className="panel explorer-filters analysis-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
-      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
@@ -270,7 +268,7 @@ function summarizeLibrary(rows) {
   return { reads, profile, meanA: aReads ? aSum / aReads : null }
 }
 
-export function LibraryComparison({ records = [], metadata = [], warnings = [], comparisonLibraries = [], onComparisonChange, onOpenTaxon, onOpenLibrary }) {
+export function LibraryComparison({ records = [], metadata = [], warnings = [], comparisonLibraries = [], minReads, onMinReadsChange, onComparisonChange, onOpenTaxon, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -297,8 +295,9 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (kingdom === 'All' || row.kingdom === kingdom) &&
+    row.reads >= (Number(minReads) || 0) &&
     (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
-  ), [records, pipeline, kingdom, minimumA])
+  ), [records, pipeline, kingdom, minReads, minimumA])
   const libraryInfo = useMemo(() => {
     const result = new Map(metadata.map((item) => [item.libraryId, { date: item.date, month: item.month, controlType: item.controlType }]))
     records.forEach((row) => { if (!result.has(row.libraryId)) result.set(row.libraryId, { month: row.month, controlType: row.controlType }) })
@@ -336,6 +335,7 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
       <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => onComparisonChange([left, event.target.value].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
@@ -355,10 +355,9 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
   </section>
 }
 
-export function DamageExplorer({ records = [], onOpenTaxon }) {
+export function DamageExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
-  const [minReads, setMinReads] = useState('50')
   const [minimumA, setMinimumA] = useState('')
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
@@ -404,7 +403,7 @@ export function DamageExplorer({ records = [], onOpenTaxon }) {
     <div className="panel explorer-filters damage-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
-      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
@@ -428,7 +427,7 @@ function metadataGroup(meta, field) {
   return meta[field] || 'Unknown'
 }
 
-export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOpenLibrary }) {
+export function RunQcExplorer({ records = [], metadata = [], warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
   const [groupField, setGroupField] = useState('date')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -443,8 +442,9 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (kingdom === 'All' || row.kingdom === kingdom) &&
+    row.reads >= (Number(minReads) || 0) &&
     (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
-  ), [records, pipeline, kingdom, minimumA])
+  ), [records, pipeline, kingdom, minReads, minimumA])
   const groups = useMemo(() => {
     const result = new Map()
     for (const row of filtered) {
@@ -484,6 +484,7 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], onOp
       <label className="filter-field"><span>Group by</span><div className="select-wrap"><select value={groupField} onChange={(event) => { setGroupField(event.target.value); setSelectedGroup('') }}>{Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
@@ -575,7 +576,7 @@ function buildCooccurrence(rows, maxTaxa, minimumShared) {
   return { nodes: laidOut, nodeMap, edges, libraryCount: libraries.size, taxonCount: taxa.size }
 }
 
-export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
+export function CooccurrenceExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -589,8 +590,9 @@ export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
   const filtered = useMemo(() => records.filter((row) =>
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (kingdom === 'All' || row.kingdom === kingdom) &&
+    row.reads >= (Number(minReads) || 0) &&
     (minimumA === '' || (row.meanA !== null && row.meanA >= Number(minimumA)))
-  ), [records, pipeline, kingdom, minimumA])
+  ), [records, pipeline, kingdom, minReads, minimumA])
   const network = useMemo(() => buildCooccurrence(filtered, Number(maxTaxa), Math.max(1, Number(minimumShared) || 1)), [filtered, maxTaxa, minimumShared])
   const strongest = network.edges[0]
 
@@ -604,6 +606,7 @@ export function CooccurrenceExplorer({ records = [], onOpenTaxon }) {
     <div className="panel explorer-filters network-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum shared libraries</span><input type="number" min="1" max="50" value={minimumShared} onChange={(event) => setMinimumShared(event.target.value)} /></label>
       <label className="filter-field"><span>Most prevalent taxa</span><div className="select-wrap"><select value={maxTaxa} onChange={(event) => setMaxTaxa(event.target.value)}>{[20, 30, 40].map((value) => <option key={value} value={value}>Top {value}</option>)}</select><ChevronDown size={15} /></div></label>

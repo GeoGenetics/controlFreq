@@ -103,11 +103,11 @@ function PcoaTooltip({ active, payload }) {
   return <div className="pcoa-tooltip"><b>{point.libraryId}</b><span>{point.controlType} · {point.month}</span><span>{point.pipeline}</span><strong>{point.reads.toLocaleString()} reads</strong>{point.warning && <em><AlertTriangle size={11} />Flagged library</em>}</div>
 }
 
-export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrary }) {
+export default function PcoaExplorer({ records = [], warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [controlType, setControlType] = useState('All')
-  const [minimumReads, setMinimumReads] = useState('0')
+  const [minimumLibraryReads, setMinimumLibraryReads] = useState('0')
   const [minimumA, setMinimumA] = useState("")
 
   const dimensions = useMemo(() => ({
@@ -120,9 +120,10 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
     (pipeline === 'All' || row.pipeline === pipeline) &&
     (kingdom === 'All' || row.kingdom === kingdom) &&
     (controlType === 'All' || row.controlType === controlType) &&
+    row.reads >= (Number(minReads) || 0) &&
     (minimumA === "" || (row.meanA !== null && row.meanA >= Number(minimumA)))
-  ), [records, pipeline, kingdom, controlType, minimumA])
-  const result = useMemo(() => calculatePcoa(rows, Number(minimumReads) || 0), [rows, minimumReads])
+  ), [records, pipeline, kingdom, controlType, minReads, minimumA])
+  const result = useMemo(() => calculatePcoa(rows, Number(minimumLibraryReads) || 0), [rows, minimumLibraryReads])
   const points = result.points.map((point) => ({ ...point, warning: warningIds.has(point.libraryId) }))
   const controlTypes = [...new Set(points.map((point) => point.controlType))]
   const colorFor = (value) => CONTROL_COLORS[value] || fallbackColors[Math.max(0, controlTypes.indexOf(value)) % fallbackColors.length]
@@ -143,7 +144,8 @@ export default function PcoaExplorer({ records = [], warnings = [], onOpenLibrar
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
-      <label className="filter-field"><span>Minimum library reads</span><input type="number" min="0" step="100" value={minimumReads} onChange={(event) => setMinimumReads(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum library total</span><input type="number" min="0" step="100" value={minimumLibraryReads} onChange={(event) => setMinimumLibraryReads(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
 

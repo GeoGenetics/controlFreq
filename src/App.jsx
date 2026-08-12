@@ -21,6 +21,20 @@ const COLORS = {
 }
 const formatNumber = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 const prettyDate = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en', { month: 'short', year: '2-digit' })
+const VIRIDIS = ['#440154', '#3b528b', '#21918c', '#5ec962', '#fde725']
+const viridisColor = (value) => {
+  const scaled = Math.max(0, Math.min(1, value)) * (VIRIDIS.length - 1)
+  const index = Math.min(VIRIDIS.length - 2, Math.floor(scaled))
+  const amount = scaled - index
+  const rgb = (hex) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16))
+  const left = rgb(VIRIDIS[index]); const right = rgb(VIRIDIS[index + 1])
+  return `rgb(${left.map((channel, i) => Math.round(channel + (right[i] - channel) * amount)).join(',')})`
+}
+
+function SortHeader({ label, column, sort, onSort, title }) {
+  const active = sort.column === column
+  return <th title={title}><button className={active ? 'sort-header active' : 'sort-header'} onClick={() => onSort(column)}>{label}<span>{active ? (sort.direction === 'asc' ? '▲' : '▼') : '↕'}</span></button></th>
+}
 
 function FilterSelect({ label, value, options, onChange }) {
   return <label className="filter-field"><span>{label}</span><div className="select-wrap"><select value={value} onChange={(event) => onChange(event.target.value)}><option value="All">All {label.toLowerCase()}</option>{options.map((option) => <option key={option}>{option}</option>)}</select><ChevronDown size={15} /></div></label>
@@ -45,7 +59,8 @@ function App() {
   const [kingdom, setKingdom] = useState('All')
   const [pipeline, setPipeline] = useState('All')
   const [taxon, setTaxon] = useState('')
-  const [minReads, setMinReads] = useState('')
+  const [minReads, setMinReads] = useState('50')
+  const [taxaSort, setTaxaSort] = useState({ column: 'reads', direction: 'desc' })
   const [minA, setMinA] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -154,11 +169,25 @@ function App() {
   const latestTotal = sumPoint(latest)
   const previousTotal = sumPoint(previous)
   const delta = previousTotal ? Math.round((latestTotal - previousTotal) / previousTotal * 100) : 0
-  const visibleTaxa = taxa.filter((item) => item.name.toLowerCase().includes(query.toLowerCase())).slice(0, 50)
+  const visibleTaxa = useMemo(() => {
+    const direction = taxaSort.direction === 'asc' ? 1 : -1
+    const value = (item) => taxaSort.column === 'taxon' ? item.name.toLowerCase()
+      : taxaSort.column === 'kingdom' ? item.kingdom.toLowerCase()
+        : taxaSort.column === 'meanA' ? (item.meanA ?? -Infinity)
+          : taxaSort.column === 'trend' ? item.change : item.reads
+    return taxa.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()))
+      .sort((a, b) => typeof value(a) === 'string' ? value(a).localeCompare(value(b)) * direction : (value(a) - value(b)) * direction)
+      .slice(0, 50)
+  }, [taxa, query, taxaSort])
+
+  const changeTaxaSort = (column) => setTaxaSort((current) => ({
+    column,
+    direction: current.column === column && current.direction === 'desc' ? 'asc' : 'desc',
+  }))
 
   const reset = () => {
     setControlType('All'); setKingdom('All'); setPipeline('All'); setTaxon('')
-    setMinReads(''); setMinA(''); setFrom(''); setTo('')
+    setMinReads('50'); setMinA(''); setFrom(''); setTo('')
   }
 
   const openTaxon = (taxonName) => { setSelectedTaxon(taxonName); setActiveTab("taxon"); window.scrollTo({ top: 0, behavior: "smooth" }) }
@@ -193,13 +222,6 @@ function App() {
           <small>QUALITY</small>
           <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
-          {activeTab === "overview" && <>
-            <small>SECTIONS</small>
-            <a href="#trends"><Activity size={18} />Contamination</a>
-            <a href="#heatmap"><Sparkles size={18} />Taxa heatmap</a>
-            <a href="#warnings"><AlertTriangle size={18} />Warnings</a>
-            <a href="#filters"><SlidersHorizontal size={18} />Filters</a>
-          </>}
         </nav>
       </aside>
 
@@ -211,8 +233,8 @@ function App() {
         </header>
 
         <PageGuide items={[
-          { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Leave them at All for the full dataset, or change one at a time to understand its effect.' },
-          { title: 'Read the patterns', text: 'The timeline shows when read volume changes; the heatmap shows which taxa drive those changes. Click either view to see the contributing libraries.' },
+          { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Minimum nreads starts at 50 and stays synchronized with the other analysis tabs.' },
+          { title: 'Read the patterns', text: 'The timeline shows when read volume changes; the viridis heatmap shows which taxa drive those changes. Click either view to see the contributing libraries.' },
           { title: 'Treat warnings as review flags', text: 'A warning means a library is unusually high compared with similar controls. It does not by itself identify the source or prove a failed run.' },
         ]} />
 
@@ -223,17 +245,17 @@ function App() {
             <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
             <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
             <label className="filter-field"><span>Taxon</span><input type="search" list="taxa-options" placeholder="All taxa" value={taxon} onChange={(event) => setTaxon(event.target.value)} /><datalist id="taxa-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
-            <label className="filter-field"><span>Minimum reads</span><input type="number" min="0" step="50" placeholder="No minimum" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
+            <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
             <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
             <label className="filter-field"><span>From</span><input type="month" min={dimensions.months[0]} max={dimensions.months.at(-1)} value={from} onChange={(event) => setFrom(event.target.value)} /></label>
             <label className="filter-field"><span>To</span><input type="month" min={dimensions.months[0]} max={dimensions.months.at(-1)} value={to} onChange={(event) => setTo(event.target.value)} /></label>
             <button className="reset" onClick={reset}><RotateCcw size={15} />Reset</button>
           </div>
-          <p className="filter-note">Read and A thresholds apply to each taxon/month group. Mean A is weighted by assigned reads.</p>
+          <p className="filter-note">The nreads threshold is shared with every analysis page. Here it applies to each taxon/month group; mean A is weighted by assigned reads.</p>
         </section>
 
         <section className="metrics" id="overview">
-          <MetricCard title="Filtered reads" value={formatNumber(totalReads)} detail="Across selected taxa" icon={Database} change={delta} />
+          <MetricCard title="Filtered reads" value={formatNumber(totalReads)} detail="% is change from previous matching month" icon={Database} change={delta} />
           <MetricCard title="Peak libraries" value={libraryCount} detail="Largest matching group" icon={FlaskConical} tone="purple" />
           <MetricCard title="Taxa represented" value={taxa.length} detail="After all filters" icon={Sparkles} tone="amber" />
           <MetricCard title="Latest load" value={formatNumber(latestTotal)} detail={latest ? prettyDate(latest.month) : 'No matching data'} icon={Activity} tone="blue" />
@@ -253,36 +275,36 @@ function App() {
         </section>
 
         <section className="panel heatmap-panel" id="heatmap">
-          <div className="panel-head"><div><span className="kicker">TAXA x TIME</span><h2>Most abundant taxa over time</h2><p>Top 12 taxa after filtering; colour intensity uses log-scaled reads</p></div><div className="heat-legend"><span>Low</span><i /><i /><i /><i /><span>High</span></div></div>
+          <div className="panel-head"><div><span className="kicker">TAXA x TIME</span><h2>Most abundant taxa over time</h2><p>Top 12 taxa after filtering; viridis colour uses log-scaled reads</p></div><div className="heat-legend"><span>Low</span><i /><i /><i /><i /><i /><span>High</span></div></div>
           <div className="heatmap-scroll">{heatmap.top.length ? <table className="heatmap-table"><thead><tr><th>Taxon</th>{heatmap.months.map((month) => <th key={month}><button className="heatmap-date" onClick={() => openPeak(month)} title={`Open libraries from ${prettyDate(month)}`}>{prettyDate(month)}</button></th>)}</tr></thead><tbody>{heatmap.top.map((item) => {
             const key = `${item.kingdom}\u0000${item.name}`
             return <tr key={key}><th><i style={{ background: COLORS[item.kingdom] }} /><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></th>{heatmap.months.map((month) => {
               const value = heatmap.values.get(`${key}\u0000${month}`) || 0
-              const intensity = value && heatmap.max ? 0.12 + 0.88 * Math.log1p(value) / Math.log1p(heatmap.max) : 0
-              return <td key={month} title={`${item.name} - ${prettyDate(month)} - ${value.toLocaleString()} reads`}>{value ? <button className="heatmap-cell" style={{ background: `rgba(26, 170, 117, ${intensity})` }} onClick={() => openPeak(month, item.name)} aria-label={`Open ${item.name} libraries from ${prettyDate(month)}`}>{formatNumber(value)}</button> : <span />}</td>
+              const intensity = value && heatmap.max ? Math.log1p(value) / Math.log1p(heatmap.max) : 0
+              return <td key={month} title={`${item.name} - ${prettyDate(month)} - ${value.toLocaleString()} reads`}>{value ? <button className="heatmap-cell" style={{ background: viridisColor(intensity), color: intensity < .55 ? '#fff' : '#18261f' }} onClick={() => openPeak(month, item.name)} aria-label={`Open ${item.name} libraries from ${prettyDate(month)}`}>{formatNumber(value)}</button> : <span />}</td>
             })}</tr>
           })}</tbody></table> : <EmptyState />}</div>
         </section>
 
         <section className="bottom-grid" id="taxa">
           <article className="panel table-panel">
-            <div className="panel-head"><div><span className="kicker">TAXA EXPLORER</span><h2>Most abundant contaminants</h2><p>Up to 50 taxa ranked after filtering</p></div><label className="search"><Search size={16} /><input placeholder="Search results..." value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
-            <div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Assigned reads</th><th>Mean A</th><th>Trend</th></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`}>{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
+            <div className="panel-head"><div><span className="kicker">TAXA EXPLORER</span><h2>Most abundant contaminants</h2><p>Trend is the read-count change from the previous to the latest matching month</p></div><label className="search"><Search size={16} /><input placeholder="Search results..." value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
+            <div className="table-scroll"><table><thead><tr><SortHeader label="Taxon" column="taxon" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Kingdom" column="kingdom" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Assigned reads" column="reads" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Mean A" column="meanA" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Trend" column="trend" sort={taxaSort} onSort={changeTaxaSort} title="Percent change in reads from the previous to the latest matching month" /></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`} title="Change in reads from the previous to latest matching month">{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
           </article>
           <article className="panel warning-panel" id="warnings">
             <div className="panel-head"><div><span className="kicker">LIBRARY WARNINGS</span><h2>Higher than normal content</h2><p>{data.warningMethod || 'Available after rebuilding dashboard data'}</p></div><span className={`warning-count ${warnings.length ? 'active' : ''}`}>{warnings.length}</span></div>
-            <div className="warning-list">{warnings.slice(0, 12).map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: <button className="taxon-link compact" onClick={() => openTaxon(item.topTaxon)}>{item.topTaxon || 'Unknown'}</button></small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
+            <div className="warning-list">{warnings.map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: <button className="taxon-link compact" onClick={() => openTaxon(item.topTaxon)}>{item.topTaxon || 'Unknown'}</button></small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
           </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
-          : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
-          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />
-          : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} onOpenTaxon={openTaxon} />}
+        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} minReads={minReads} onMinReadsChange={setMinReads} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
+          : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} minReads={minReads} onMinReadsChange={setMinReads} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} minReads={minReads} onMinReadsChange={setMinReads} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />
+          : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />}
 
         <PeakLibraries month={peakMonth} taxon={peakTaxon} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={closePeak} onOpenLibrary={(libraryId) => { closePeak(); setSelectedLibrary(libraryId); setActiveTab("library") }} />
 
