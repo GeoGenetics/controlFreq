@@ -5,7 +5,9 @@ The dashboard is a Vite/React application that reads a compact summary of a cont
 ## Dashboard features
 
 Navigation is grouped into Monitor, Libraries, Taxa, and Quality so related
-analyses stay together, without a second Overview section-link group. Every main tab includes an open-by-default,
+analyses stay together, without a second Overview section-link group. A lightweight
+Back control returns to the previous dashboard tab and scroll position after a
+drill-down. Every main tab includes an open-by-default,
 plain-language guide explaining what the page compares, how to read its
 visuals, and where clicks lead; the guide can be collapsed at any time.
 
@@ -18,9 +20,12 @@ across every relevant tab while the dashboard is open.
 Monthly read-volume points open library drill-downs. Peak libraries is the
 largest library count contributing to any one visible taxon/month summary;
 latest load is the total visible read count in the newest matching month.
-Taxon names throughout the dashboard open Taxon Explorer. Its recurrence chart
-uses side-by-side bars for extraction and library negatives; bar height is
-assigned reads and the fixed fill-colour scale represents read-weighted mean A.
+Taxon names throughout the dashboard open Taxon Explorer. Hovering or keyboard-
+focusing a taxon text link opens a delayed, cached Wikipedia preview; analytical
+plot and Krona tooltips retain their sequencing-specific information. Its
+recurrence chart uses side-by-side bars for extraction and library negatives;
+bar height is assigned reads, the heavier outline distinguishes control type,
+and the fixed fill-colour scale represents read-weighted mean A.
 
 Library Explorer explains the warning baseline, provides a persistent two-slot
 comparison tray, and shows detailed lineage values on Krona hover. Internal

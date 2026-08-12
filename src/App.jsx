@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Activity, AlertTriangle, ChevronDown, Database, Download,
+  Activity, AlertTriangle, ChevronDown, ChevronLeft, Database, Download,
   ChartScatter, FlaskConical, LayoutDashboard, Network, RotateCcw, Search,
   SlidersHorizontal, Sparkles, TrendingDown, TrendingUp,
 } from 'lucide-react'
@@ -14,11 +14,17 @@ import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
 import PageGuide from "./PageGuide.jsx"
 import WarningExplorer from "./WarningExplorer.jsx"
+import WikiTaxonTooltip from "./WikiTaxonTooltip.jsx"
 import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, PrevalenceExplorer, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
   Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
   'Other Eukaryote': '#b08cff',
+}
+const TAB_LABELS = {
+  overview: 'Overview', warnings: 'Library warnings', library: 'Library explorer',
+  compare: 'Compare libraries', pcoa: 'PCoA', taxon: 'Taxon explorer',
+  prevalence: 'Taxa landscape', cooccurrence: 'Co-occurrence', damage: 'Damage / A', run: 'Run / batch QC',
 }
 const formatNumber = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 const prettyDate = (month) => new Date(`${month}-01T00:00:00`).toLocaleDateString('en', { month: 'short', year: '2-digit' })
@@ -67,6 +73,7 @@ function App() {
   const [to, setTo] = useState('')
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState("overview")
+  const [navigationHistory, setNavigationHistory] = useState([])
   const [selectedLibrary, setSelectedLibrary] = useState("")
   const [peakMonth, setPeakMonth] = useState("")
   const [peakTaxon, setPeakTaxon] = useState("")
@@ -191,12 +198,25 @@ function App() {
     setMinReads('50'); setMinA(''); setFrom(''); setTo('')
   }
 
-  const openTaxon = (taxonName) => { setSelectedTaxon(taxonName); setActiveTab("taxon"); window.scrollTo({ top: 0, behavior: "smooth" }) }
+  const navigateTo = (tab) => {
+    if (tab === activeTab) return
+    setNavigationHistory((current) => [...current, { tab: activeTab, scrollY: window.scrollY }].slice(-20))
+    setActiveTab(tab)
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+  const goBack = () => {
+    const previous = navigationHistory.at(-1)
+    if (!previous) return
+    setNavigationHistory((current) => current.slice(0, -1))
+    setActiveTab(previous.tab)
+    requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: previous.scrollY, behavior: 'auto' })))
+  }
+  const openTaxon = (taxonName) => { setSelectedTaxon(taxonName); navigateTo("taxon") }
   const openPeak = (month, taxonName = "") => { setPeakMonth(month); setPeakTaxon(taxonName) }
   const closePeak = () => { setPeakMonth(""); setPeakTaxon("") }
   const addToComparison = (libraryId) => setComparisonLibraries((current) => current.includes(libraryId) ? current : current.length < 2 ? [...current, libraryId] : [current[1], libraryId])
   const removeFromComparison = (libraryId) => setComparisonLibraries((current) => current.filter((id) => id !== libraryId))
-  const compareLibraries = (left, right) => { setComparisonLibraries([left, right]); setActiveTab("compare") }
+  const compareLibraries = (left, right) => { setComparisonLibraries([left, right]); navigateTo("compare") }
 
   const exportCsv = () => {
     const header = 'month,control_type,kingdom,pipeline,taxon,reads,libraries,mean_A\n'
@@ -211,23 +231,24 @@ function App() {
         <a className="brand" href="#top"><span><FlaskConical size={21} /></span><b>controlFreq</b></a>
         <nav>
           <small>MONITOR</small>
-          <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
-          <button className={activeTab === "warnings" ? "active" : ""} onClick={() => setActiveTab("warnings")}><AlertTriangle size={18} />Library warnings</button>
+          <button className={activeTab === "overview" ? "active" : ""} onClick={() => navigateTo("overview")}><LayoutDashboard size={18} />Overview</button>
+          <button className={activeTab === "warnings" ? "active" : ""} onClick={() => navigateTo("warnings")}><AlertTriangle size={18} />Library warnings</button>
           <small>LIBRARIES</small>
-          <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
-          <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
-          <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => setActiveTab("pcoa")}><ChartScatter size={18} />PCoA</button>
+          <button className={activeTab === "library" ? "active" : ""} onClick={() => navigateTo("library")}><Network size={18} />Library explorer</button>
+          <button className={activeTab === "compare" ? "active" : ""} onClick={() => navigateTo("compare")}><Network size={18} />Compare libraries</button>
+          <button className={activeTab === "pcoa" ? "active" : ""} onClick={() => navigateTo("pcoa")}><ChartScatter size={18} />PCoA</button>
           <small>TAXA</small>
-          <button className={activeTab === "taxon" ? "active" : ""} onClick={() => setActiveTab("taxon")}><Search size={18} />Taxon explorer</button>
-          <button className={activeTab === "prevalence" ? "active" : ""} onClick={() => setActiveTab("prevalence")}><ChartScatter size={18} />Taxa landscape</button>
-          <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => setActiveTab("cooccurrence")}><Network size={18} />Co-occurrence</button>
+          <button className={activeTab === "taxon" ? "active" : ""} onClick={() => navigateTo("taxon")}><Search size={18} />Taxon explorer</button>
+          <button className={activeTab === "prevalence" ? "active" : ""} onClick={() => navigateTo("prevalence")}><ChartScatter size={18} />Taxa landscape</button>
+          <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => navigateTo("cooccurrence")}><Network size={18} />Co-occurrence</button>
           <small>QUALITY</small>
-          <button className={activeTab === "damage" ? "active" : ""} onClick={() => setActiveTab("damage")}><Sparkles size={18} />Damage / A</button>
-          <button className={activeTab === "run" ? "active" : ""} onClick={() => setActiveTab("run")}><Database size={18} />Run / batch QC</button>
+          <button className={activeTab === "damage" ? "active" : ""} onClick={() => navigateTo("damage")}><Sparkles size={18} />Damage / A</button>
+          <button className={activeTab === "run" ? "active" : ""} onClick={() => navigateTo("run")}><Database size={18} />Run / batch QC</button>
         </nav>
       </aside>
 
       <main id="top">
+        {navigationHistory.length > 0 && <button className="context-back" onClick={goBack}><ChevronLeft size={15} />Back to {TAB_LABELS[navigationHistory.at(-1).tab] || 'previous page'}</button>}
         {activeTab === "overview" ? <>
         <header className="topbar">
           <div><div className="eyebrow"><span /> LAB MONITORING</div><h1>Contamination overview</h1><p>Track recurring taxa and changes across negative controls.</p></div>
@@ -295,17 +316,19 @@ function App() {
           </article>
         </section>
 
-        </> : activeTab === "warnings" ? <WarningExplorer warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }} onOpenTaxon={openTaxon} />
-          : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} minReads={minReads} onMinReadsChange={setMinReads} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
-          : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
-          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} minReads={minReads} onMinReadsChange={setMinReads} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+        </> : activeTab === "warnings" ? <WarningExplorer warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); navigateTo("library") }} onOpenTaxon={openTaxon} />
+          : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} minReads={minReads} onMinReadsChange={setMinReads} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => navigateTo("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
+          : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); navigateTo("library") }} />
+          : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} minReads={minReads} onMinReadsChange={setMinReads} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); navigateTo("library") }} />
           : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />
-          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} minReads={minReads} onMinReadsChange={setMinReads} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "compare" ? <LibraryComparison records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} comparisonLibraries={comparisonLibraries} minReads={minReads} onMinReadsChange={setMinReads} onComparisonChange={setComparisonLibraries} onOpenTaxon={openTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); navigateTo("library") }} />
           : activeTab === "damage" ? <DamageExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />
-          : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
+          : activeTab === "run" ? <RunQcExplorer records={data.libraryTaxonRecords || []} metadata={data.libraryMetadata || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); navigateTo("library") }} />
           : <CooccurrenceExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />}
 
-        <PeakLibraries month={peakMonth} taxon={peakTaxon} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={closePeak} onOpenLibrary={(libraryId) => { closePeak(); setSelectedLibrary(libraryId); setActiveTab("library") }} />
+        <PeakLibraries month={peakMonth} taxon={peakTaxon} records={data.libraryTaxonRecords || []} overviewRows={filtered} warnings={data.libraryWarnings || []} onClose={closePeak} onOpenLibrary={(libraryId) => { closePeak(); setSelectedLibrary(libraryId); navigateTo("library") }} />
+
+        <WikiTaxonTooltip />
 
         <footer><span><i /> Data source: {data.source}</span><span>Updated {new Date(data.generatedAt).toLocaleString()}</span></footer>
       </main>

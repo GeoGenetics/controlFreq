@@ -575,10 +575,24 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .recurrence-legends { align-self: center; display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
 .control-type-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px 12px; color: #74827b; font-size: 9px; }
 .control-type-legend span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.control-type-legend i { width: 9px; height: 9px; border: 2px solid; border-radius: 2px; background: #dcece5; }
+.control-type-legend i { width: 10px; height: 10px; border: 3px solid; border-radius: 2px; background: #dcece5; }
 .recurrence-tooltip { min-width: 265px; }
-.recurrence-tooltip i { border: 2px solid; }
+.recurrence-tooltip i { border: 3px solid; }
 .compare-head button small { color: #929d98; font-size: 9px; }
+
+
+.context-back { width: max-content; min-height: 32px; margin: -8px 0 16px; padding: 0 10px 0 7px; border: 1px solid #dce4df; border-radius: 8px; background: white; color: #52645b; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; box-shadow: 0 3px 10px #1833260a; }
+.context-back:hover { color: #147b58; border-color: #b8d9cb; }
+.wiki-hover { position: fixed; z-index: 300; width: min(340px, calc(100vw - 24px)); max-height: 235px; pointer-events: none; display: flex; gap: 11px; padding: 12px; overflow: hidden; border: 1px solid #d8e3dd; border-radius: 10px; background: #fffffff8; color: #31443a; box-shadow: 0 15px 38px #10261c38; }
+.wiki-hover.above { transform: translateY(-100%); }
+.wiki-hover img { width: 72px; height: 72px; flex: 0 0 auto; border-radius: 7px; object-fit: cover; }
+.wiki-hover > div { min-width: 0; }
+.wiki-hover span { display: block; margin-bottom: 3px; color: #18845e; font-size: 8px; font-weight: 800; letter-spacing: .12em; }
+.wiki-hover b { display: block; color: #21372c; font: 700 12px Manrope; }
+.wiki-hover p { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; margin: 5px 0; overflow: hidden; color: #68776f; font-size: 10px; line-height: 1.45; }
+.wiki-hover small { display: block; color: #99a39e; font-size: 8px; }
+.wiki-hover-state { min-height: 42px; display: flex; align-items: center; gap: 7px; color: #718078; font-size: 10px; }
+.wiki-hover-state b { display: inline; font: inherit; font-weight: 700; }
 
 .overview-taxa-only { grid-template-columns: minmax(0, 1fr); }
 .warning-page { min-height: calc(100vh - 95px); }
