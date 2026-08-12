@@ -580,7 +580,33 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .recurrence-tooltip i { border: 2px solid; }
 .compare-head button small { color: #929d98; font-size: 9px; }
 
+.overview-taxa-only { grid-template-columns: minmax(0, 1fr); }
+.warning-page { min-height: calc(100vh - 95px); }
+.warning-count.large { width: auto; min-width: 58px; padding: 0 12px; display: flex; gap: 6px; align-items: center; justify-content: center; }
+.warning-filters { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)) repeat(3, minmax(145px, 1fr)) minmax(180px, 1.25fr) auto; gap: 10px; align-items: end; padding: 16px 18px; margin-bottom: 14px; }
+.warning-search { position: relative; }
+.warning-search svg { position: absolute; left: 10px; bottom: 10px; color: #8c9892; }
+.warning-search input { width: 100%; height: 36px; border: 1px solid #dce3df; border-radius: 7px; padding: 0 10px 0 32px; background: #fbfcfb; font-size: 12px; outline: none; }
+.warning-metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin-bottom: 14px; overflow: hidden; }
+.warning-metrics > div { padding: 16px 18px; border-left: 1px solid #edf1ee; display: flex; flex-direction: column; gap: 3px; }
+.warning-metrics > div:first-child { border-left: 0; }
+.warning-metrics span, .warning-metrics small { color: #85928b; font-size: 10px; }
+.warning-metrics b { color: #20362c; font: 800 22px Manrope; }
+.warning-chart-panel { margin-bottom: 14px; }
+.warning-chart { height: 300px; padding: 5px 13px 10px; }
+.warning-table-scroll { max-height: 650px; overflow: auto; }
+.warning-table-scroll thead { position: sticky; top: 0; z-index: 2; }
+.warning-table-scroll td { white-space: nowrap; }
+.warning-table-scroll td:nth-child(3) { min-width: 130px; }
+.warning-baseline { display: block; margin-top: 3px; color: #96a29c; font-size: 9px; }
+
+@media (max-width: 1200px) {
+  .warning-filters { grid-template-columns: repeat(4, minmax(130px, 1fr)); }
+}
+
 @media (max-width: 760px) {
   .recurrence-legends { align-items: flex-start; }
   .control-type-legend { justify-content: flex-start; }
+  .warning-filters { grid-template-columns: 1fr 1fr; }
+  .warning-metrics { grid-template-columns: 1fr 1fr; }
 }

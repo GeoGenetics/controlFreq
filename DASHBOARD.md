@@ -15,7 +15,9 @@ dashboard filters these summaries by taxon, assigned reads, mean A, control,
 kingdom, pipeline, and date. Minimum nreads defaults to 50 and is synchronized
 across every relevant tab while the dashboard is open.
 
-Warning library IDs and monthly read-volume points open library drill-downs.
+Monthly read-volume points open library drill-downs. Peak libraries is the
+largest library count contributing to any one visible taxon/month summary;
+latest load is the total visible read count in the newest matching month.
 Taxon names throughout the dashboard open Taxon Explorer. Its recurrence chart
 uses side-by-side bars for extraction and library negatives; bar height is
 assigned reads and the fixed fill-colour scale represents read-weighted mean A.
@@ -37,13 +39,19 @@ point opens Taxon Explorer. Taxon Explorer also loads an optional Wikipedia
 summary and image using the normalized taxon name, with clear external attribution.
 
 The taxa heatmap shows the 12 most abundant matching taxa over time using a
-a log-scaled viridis colour scale. Date headings open all matching libraries, taxon
+log-scaled viridis colour scale. Date headings open all matching libraries, taxon
 labels open Taxon Explorer, and populated cells open the matching month/taxon
-library list before drilling into the selected library's Krona view. Library warnings use total genus-level reads and
-flag values above the median plus three scaled median absolute deviations
+library list before drilling into the selected library's Krona view.
+
+Library Warnings is a dedicated Monitor tab with exact-date, control-type,
+kingdom, pipeline, minimum-warning-read, and text filters. Its sortable table
+links library IDs to Library Explorer and leading taxa to Taxon Explorer. A
+monthly grouped bar chart compares warning frequency between extraction and
+library negatives. Warnings use total genus-level reads and flag values above
+the median plus three scaled median absolute deviations
 within each control type, kingdom, and pipeline group. At least four libraries
-are required to establish a baseline, and warnings are shown newest-first in a
-taller scrolling list. The Overview contaminant table supports sorting by every
+are required to establish a baseline, and warnings default to newest-first in a
+scrolling table. The Overview contaminant table supports sorting by every
 column; its trend is the percent read-count change from the previous to the
 latest matching month.
 Minimum mean A filtering is available on

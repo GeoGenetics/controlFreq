@@ -13,6 +13,7 @@ import LibraryExplorer from "./LibraryExplorer.jsx"
 import PcoaExplorer from "./PcoaExplorer.jsx"
 import PeakLibraries from "./PeakLibraries.jsx"
 import PageGuide from "./PageGuide.jsx"
+import WarningExplorer from "./WarningExplorer.jsx"
 import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, PrevalenceExplorer, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
 const COLORS = {
@@ -211,6 +212,7 @@ function App() {
         <nav>
           <small>MONITOR</small>
           <button className={activeTab === "overview" ? "active" : ""} onClick={() => setActiveTab("overview")}><LayoutDashboard size={18} />Overview</button>
+          <button className={activeTab === "warnings" ? "active" : ""} onClick={() => setActiveTab("warnings")}><AlertTriangle size={18} />Library warnings</button>
           <small>LIBRARIES</small>
           <button className={activeTab === "library" ? "active" : ""} onClick={() => setActiveTab("library")}><Network size={18} />Library explorer</button>
           <button className={activeTab === "compare" ? "active" : ""} onClick={() => setActiveTab("compare")}><Network size={18} />Compare libraries</button>
@@ -235,7 +237,7 @@ function App() {
         <PageGuide items={[
           { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Minimum nreads starts at 50 and stays synchronized with the other analysis tabs.' },
           { title: 'Read the patterns', text: 'The timeline shows when read volume changes; the viridis heatmap shows which taxa drive those changes. Click either view to see the contributing libraries.' },
-          { title: 'Treat warnings as review flags', text: 'A warning means a library is unusually high compared with similar controls. It does not by itself identify the source or prove a failed run.' },
+          { title: 'Read the summary cards', text: 'Peak libraries is the largest distinct-library count behind one visible taxon, month, control-type, kingdom, and pipeline result. Latest load sums all visible assigned reads in the newest matching month.' },
         ]} />
 
         <section className="filter-panel" id="filters">
@@ -256,9 +258,9 @@ function App() {
 
         <section className="metrics" id="overview">
           <MetricCard title="Filtered reads" value={formatNumber(totalReads)} detail="% is change from previous matching month" icon={Database} change={delta} />
-          <MetricCard title="Peak libraries" value={libraryCount} detail="Largest matching group" icon={FlaskConical} tone="purple" />
+          <MetricCard title="Peak libraries" value={libraryCount} detail="Largest library count in one result" icon={FlaskConical} tone="purple" />
           <MetricCard title="Taxa represented" value={taxa.length} detail="After all filters" icon={Sparkles} tone="amber" />
-          <MetricCard title="Latest load" value={formatNumber(latestTotal)} detail={latest ? prettyDate(latest.month) : 'No matching data'} icon={Activity} tone="blue" />
+          <MetricCard title="Latest load" value={formatNumber(latestTotal)} detail={latest ? `Total reads in ${prettyDate(latest.month)}` : 'No matching data'} icon={Activity} tone="blue" />
           <MetricCard title="Flagged libraries" value={flaggedLibraries} detail="Above robust baseline" icon={AlertTriangle} tone={flaggedLibraries ? 'red' : 'green'} />
         </section>
 
@@ -286,18 +288,15 @@ function App() {
           })}</tbody></table> : <EmptyState />}</div>
         </section>
 
-        <section className="bottom-grid" id="taxa">
+        <section className="bottom-grid overview-taxa-only" id="taxa">
           <article className="panel table-panel">
             <div className="panel-head"><div><span className="kicker">TAXA EXPLORER</span><h2>Most abundant contaminants</h2><p>Trend is the read-count change from the previous to the latest matching month</p></div><label className="search"><Search size={16} /><input placeholder="Search results..." value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
             <div className="table-scroll"><table><thead><tr><SortHeader label="Taxon" column="taxon" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Kingdom" column="kingdom" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Assigned reads" column="reads" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Mean A" column="meanA" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Trend" column="trend" sort={taxaSort} onSort={changeTaxaSort} title="Percent change in reads from the previous to the latest matching month" /></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`} title="Change in reads from the previous to latest matching month">{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
           </article>
-          <article className="panel warning-panel" id="warnings">
-            <div className="panel-head"><div><span className="kicker">LIBRARY WARNINGS</span><h2>Higher than normal content</h2><p>{data.warningMethod || 'Available after rebuilding dashboard data'}</p></div><span className={`warning-count ${warnings.length ? 'active' : ''}`}>{warnings.length}</span></div>
-            <div className="warning-list">{warnings.map((item) => <div className="warning-row" key={`${item.libraryId}-${item.month}-${item.kingdom}-${item.pipeline}`}><span className="warning-icon"><AlertTriangle size={15} /></span><div><button className="library-link" onClick={() => { setSelectedLibrary(item.libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }}>{item.libraryId}</button><span>{prettyDate(item.month)} - {item.controlType} - {item.kingdom}</span><small>Top taxon: <button className="taxon-link compact" onClick={() => openTaxon(item.topTaxon)}>{item.topTaxon || 'Unknown'}</button></small></div><strong>{formatNumber(item.reads)}<small>{item.fold ? `${item.fold}x median` : `median ${formatNumber(item.baseline)}`}</small></strong></div>)}{!warnings.length && <EmptyState title="No unusual libraries" detail="None exceed the robust baseline for this selection." />}</div>
-          </article>
         </section>
 
-        </> : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} minReads={minReads} onMinReadsChange={setMinReads} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
+        </> : activeTab === "warnings" ? <WarningExplorer warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library"); window.scrollTo({ top: 0, behavior: "smooth" }) }} onOpenTaxon={openTaxon} />
+          : activeTab === "library" ? <LibraryExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} warningMethod={data.warningMethod} selectedLibrary={selectedLibrary} minReads={minReads} onMinReadsChange={setMinReads} onSelectLibrary={setSelectedLibrary} comparisonLibraries={comparisonLibraries} onAddToComparison={addToComparison} onRemoveFromComparison={removeFromComparison} onOpenComparison={() => setActiveTab("compare")} onCompareWith={compareLibraries} onOpenTaxon={openTaxon} />
           : activeTab === "pcoa" ? <PcoaExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "taxon" ? <TaxonExplorer records={data.libraryTaxonRecords || []} warnings={data.libraryWarnings || []} selectedTaxon={selectedTaxon} minReads={minReads} onMinReadsChange={setMinReads} onSelectTaxon={setSelectedTaxon} onOpenLibrary={(libraryId) => { setSelectedLibrary(libraryId); setActiveTab("library") }} />
           : activeTab === "prevalence" ? <PrevalenceExplorer records={data.libraryTaxonRecords || []} minReads={minReads} onMinReadsChange={setMinReads} onOpenTaxon={openTaxon} />
