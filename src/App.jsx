@@ -86,6 +86,8 @@ function App() {
   const [peakTaxon, setPeakTaxon] = useState("")
   const [comparisonLibraries, setComparisonLibraries] = useState([])
   const [selectedTaxon, setSelectedTaxon] = useState("")
+  const [recentReferenceMonth, setRecentReferenceMonth] = useState("")
+  const [recentComparisonMonth, setRecentComparisonMonth] = useState("")
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
@@ -134,17 +136,24 @@ function App() {
     }
   }, [filtered])
 
+  const recentMonthOptions = useMemo(() => [...new Set(filtered.map((row) => row.month))].sort().reverse(), [filtered])
+
   const recentChanges = useMemo(() => {
-    const months = [...new Set(filtered.map((row) => row.month))].sort()
-    const latestMonth = months.at(-1)
-    const previousMonth = months.at(-2)
-    if (!latestMonth || !previousMonth) return { latestMonth, previousMonth, newTaxa: [], goneTaxa: [], rising: [], falling: [] }
+    const autoComparison = recentMonthOptions[0]
+    const autoReference = recentMonthOptions[1]
+    const requestedComparison = recentMonthOptions.includes(recentComparisonMonth) ? recentComparisonMonth : autoComparison
+    const requestedReference = recentMonthOptions.includes(recentReferenceMonth) ? recentReferenceMonth : autoReference
+    const comparisonMonth = requestedComparison
+    const referenceMonth = requestedReference !== comparisonMonth
+      ? requestedReference
+      : recentMonthOptions.find((month) => month !== comparisonMonth)
+    if (!comparisonMonth || !referenceMonth) return { comparisonMonth, referenceMonth, newTaxa: [], goneTaxa: [], rising: [], falling: [] }
     const groups = new Map()
     for (const row of filtered) {
-      if (row.month !== latestMonth && row.month !== previousMonth) continue
+      if (row.month !== comparisonMonth && row.month !== referenceMonth) continue
       const key = row.kingdom + '\u0000' + row.name
       const item = groups.get(key) || { name: row.name, kingdom: row.kingdom, previous: 0, latest: 0 }
-      if (row.month === latestMonth) item.latest += row.reads
+      if (row.month === comparisonMonth) item.latest += row.reads
       else item.previous += row.reads
       groups.set(key, item)
     }
@@ -154,13 +163,13 @@ function App() {
       percent: item.previous ? (item.latest - item.previous) / item.previous * 100 : null,
     }))
     return {
-      latestMonth, previousMonth,
+      comparisonMonth, referenceMonth,
       newTaxa: items.filter((item) => !item.previous && item.latest).sort((a, b) => b.latest - a.latest).slice(0, 5),
       goneTaxa: items.filter((item) => item.previous && !item.latest).sort((a, b) => b.previous - a.previous).slice(0, 5),
       rising: items.filter((item) => item.previous && item.latest && item.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 5),
       falling: items.filter((item) => item.previous && item.latest && item.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 5),
     }
-  }, [filtered])
+  }, [filtered, recentMonthOptions, recentReferenceMonth, recentComparisonMonth])
 
   const taxa = useMemo(() => {
     const groups = new Map()
@@ -292,7 +301,7 @@ function App() {
 
         <PageGuide items={[
           { title: 'Start with filters', text: 'Filters narrow every number and plot on this page. Minimum nreads starts at 50 and stays synchronized with the other analysis tabs.' },
-          { title: 'Read the patterns', text: 'Recent Changes compares the newest two matching months. The timeline shows longer-term volume and the viridis heatmap shows which taxa drive it; click taxon names or chart cells to investigate.' },
+          { title: 'Read the patterns', text: 'Recent Changes defaults to the newest two matching months, or lets you select any other pair. The timeline shows longer-term volume and the viridis heatmap shows which taxa drive it; click taxon names or chart cells to investigate.' },
           { title: 'Read the summary cards', text: 'Peak libraries is the largest distinct-library count behind one visible taxon, month, control-type, kingdom, and pipeline result. Latest load sums all visible assigned reads in the newest matching month.' },
         ]} />
 
@@ -321,12 +330,12 @@ function App() {
         </section>
 
         <section className="panel recent-changes-panel">
-          <div className="panel-head"><div><span className="kicker">RECENT CHANGES</span><h2>What changed in the newest matching month?</h2><p>{recentChanges.previousMonth && recentChanges.latestMonth ? prettyDate(recentChanges.latestMonth) + ' versus ' + prettyDate(recentChanges.previousMonth) : 'Choose a range containing at least two matching months'}</p></div><span className="recent-change-note">After active filters</span></div>
-          {recentChanges.previousMonth ? <div className="recent-change-grid">
-            <RecentChangeColumn title="Newly detected" detail="Absent in previous month" tone="new" kind="new" items={recentChanges.newTaxa} onOpenTaxon={openTaxon} />
+          <div className="panel-head recent-change-head"><div><span className="kicker">RECENT CHANGES</span><h2>What changed between two matching months?</h2><p>{recentChanges.referenceMonth && recentChanges.comparisonMonth ? prettyDate(recentChanges.comparisonMonth) + ' versus ' + prettyDate(recentChanges.referenceMonth) : 'Choose a range containing at least two matching months'}</p></div><div className="recent-change-controls"><label><span>Reference month</span><select value={recentChanges.referenceMonth || ''} onChange={(event) => setRecentReferenceMonth(event.target.value)} disabled={recentMonthOptions.length < 2}>{recentMonthOptions.map((month) => <option key={month} value={month} disabled={month === recentChanges.comparisonMonth}>{prettyDate(month)}</option>)}</select></label><span>→</span><label><span>Comparison month</span><select value={recentChanges.comparisonMonth || ''} onChange={(event) => setRecentComparisonMonth(event.target.value)} disabled={recentMonthOptions.length < 2}>{recentMonthOptions.map((month) => <option key={month} value={month} disabled={month === recentChanges.referenceMonth}>{prettyDate(month)}</option>)}</select></label>{(recentReferenceMonth || recentComparisonMonth) && <button onClick={() => { setRecentReferenceMonth(''); setRecentComparisonMonth('') }}><RotateCcw size={12} />Use newest pair</button>}<small>After active filters</small></div></div>
+          {recentChanges.referenceMonth ? <div className="recent-change-grid">
+            <RecentChangeColumn title="Newly detected" detail="Absent in reference month" tone="new" kind="new" items={recentChanges.newTaxa} onOpenTaxon={openTaxon} />
             <RecentChangeColumn title="Biggest increases" detail="Ranked by added reads" tone="rising" kind="rising" items={recentChanges.rising} onOpenTaxon={openTaxon} />
             <RecentChangeColumn title="Biggest decreases" detail="Ranked by lost reads" tone="falling" kind="falling" items={recentChanges.falling} onOpenTaxon={openTaxon} />
-            <RecentChangeColumn title="No longer detected" detail="Absent in latest month" tone="gone" kind="gone" items={recentChanges.goneTaxa} onOpenTaxon={openTaxon} />
+            <RecentChangeColumn title="No longer detected" detail="Absent in comparison month" tone="gone" kind="gone" items={recentChanges.goneTaxa} onOpenTaxon={openTaxon} />
           </div> : <EmptyState title="Two months are needed" detail="Widen the date or other filters to compare recent changes." />}
           <p className="recent-change-footnote">“Newly” and “no longer” mean present or absent after the active filters; they do not prove biological arrival or disappearance.</p>
         </section>

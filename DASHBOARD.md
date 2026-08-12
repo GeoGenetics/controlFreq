@@ -20,7 +20,8 @@ across every relevant tab while the dashboard is open.
 Monthly read-volume points open library drill-downs. Peak libraries is the
 largest library count contributing to any one visible taxon/month summary;
 latest load is the total visible read count in the newest matching month.
-The Overview Recent Changes panel compares the newest two matching months and
+The Overview Recent Changes panel defaults to the newest two matching months,
+with selectors for comparing any other two months available after filtering. It
 lists newly detected taxa, the largest read increases and decreases, and taxa
 no longer detected. Taxon names link directly to Taxon Explorer. Presence and
 absence in this panel are calculated after the active filters, so they are not

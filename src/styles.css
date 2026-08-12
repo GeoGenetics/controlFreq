@@ -595,7 +595,14 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .wiki-hover-state b { display: inline; font: inherit; font-weight: 700; }
 
 .recent-changes-panel { margin-bottom: 15px; overflow: hidden; }
-.recent-change-note { align-self: center; padding: 5px 8px; border-radius: 12px; background: #f0f5f2; color: #718078; font-size: 9px; font-weight: 700; }
+.recent-change-head { gap: 18px; }
+.recent-change-controls { display: flex; align-items: flex-end; gap: 8px; }
+.recent-change-controls label { display: flex; flex-direction: column; gap: 4px; color: #7c8982; font-size: 8px; font-weight: 700; }
+.recent-change-controls select { height: 31px; min-width: 112px; padding: 0 24px 0 8px; border: 1px solid #dce3df; border-radius: 7px; background: #fbfcfb; color: #33463c; font-size: 10px; }
+.recent-change-controls > span { padding-bottom: 8px; color: #9ba69f; }
+.recent-change-controls button { height: 31px; display: inline-flex; align-items: center; gap: 5px; padding: 0 9px; border: 1px solid #dce3df; border-radius: 7px; background: white; color: #53655c; font-size: 9px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.recent-change-controls button:hover { border-color: #b8d9cb; color: #147b58; }
+.recent-change-controls small { align-self: center; padding: 5px 8px; border-radius: 12px; background: #f0f5f2; color: #718078; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .recent-change-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .recent-change-column { min-width: 0; border-left: 1px solid #edf1ee; border-top: 3px solid #cad7d1; }
 .recent-change-column:first-child { border-left: 0; }
@@ -634,6 +641,8 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .warning-baseline { display: block; margin-top: 3px; color: #96a29c; font-size: 9px; }
 
 @media (max-width: 1100px) {
+  .recent-change-head { align-items: flex-start; flex-direction: column; }
+  .recent-change-controls { width: 100%; flex-wrap: wrap; }
   .recent-change-grid { grid-template-columns: 1fr 1fr; }
   .recent-change-column:nth-child(3) { border-left: 0; }
 }
@@ -647,6 +656,9 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .control-type-legend { justify-content: flex-start; }
   .warning-filters { grid-template-columns: 1fr 1fr; }
   .warning-metrics { grid-template-columns: 1fr 1fr; }
+  .recent-change-controls label { flex: 1 1 120px; }
+  .recent-change-controls select { width: 100%; }
+  .recent-change-controls > span { display: none; }
   .recent-change-grid { grid-template-columns: 1fr; }
   .recent-change-column { border-left: 0; }
 }
