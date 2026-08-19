@@ -365,9 +365,7 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
   const [minimumA, setMinimumA] = useState('')
   const [selectedBinIndex, setSelectedBinIndex] = useState(null)
   const [selectedMonth, setSelectedMonth] = useState('')
-  const [tableQuery, setTableQuery] = useState('')
-  const [tableKingdom, setTableKingdom] = useState('All')
-  const [minimumLibraries, setMinimumLibraries] = useState('1')
+  const [tableSort, setTableSort] = useState({ key: 'meanA', direction: 'desc' })
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
@@ -413,20 +411,26 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
     }
     return [...taxa.values()].map((item) => ({ ...item, meanA: item.aSum / item.reads })).sort((a, b) => b.meanA - a.meanA)
   }, [selectedRows])
-  const tableKingdoms = useMemo(() => [...new Set(selectedTaxa.map((item) => item.kingdom))].sort(), [selectedTaxa])
-  useEffect(() => {
-    if (tableKingdom !== 'All' && !tableKingdoms.includes(tableKingdom)) setTableKingdom('All')
-  }, [tableKingdom, tableKingdoms])
-
-  const supportingTaxa = useMemo(() => {
-    const query = tableQuery.trim().toLowerCase()
-    const libraryThreshold = Math.max(1, Number(minimumLibraries) || 1)
-    return selectedTaxa.filter((item) =>
-      (!query || item.name.toLowerCase().includes(query)) &&
-      (tableKingdom === 'All' || item.kingdom === tableKingdom) &&
-      item.libraries.size >= libraryThreshold
-    ).slice(0, 50)
-  }, [selectedTaxa, tableQuery, tableKingdom, minimumLibraries])
+  const sortedTaxa = useMemo(() => {
+    const valueFor = (item) => tableSort.key === 'libraries' ? item.libraries.size : item[tableSort.key]
+    return [...selectedTaxa].sort((left, right) => {
+      const leftValue = valueFor(left)
+      const rightValue = valueFor(right)
+      const comparison = typeof leftValue === 'string'
+        ? leftValue.localeCompare(rightValue)
+        : leftValue - rightValue
+      return (tableSort.direction === 'asc' ? comparison : -comparison) || left.name.localeCompare(right.name)
+    }).slice(0, 50)
+  }, [selectedTaxa, tableSort])
+  const changeTableSort = (key) => setTableSort((current) => ({
+    key,
+    direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+  }))
+  const sortableHeader = (key, label, title) => {
+    const active = tableSort.key === key
+    const direction = active ? tableSort.direction : null
+    return <th aria-sort={direction === 'asc' ? 'ascending' : direction === 'desc' ? 'descending' : 'none'} title={title}><button type="button" className={active ? 'active' : ''} onClick={() => changeTableSort(key)}>{label}<span aria-hidden="true">{direction === 'asc' ? '↑' : direction === 'desc' ? '↓' : '↕'}</span></button></th>
+  }
   useEffect(() => {
     setSelectedBinIndex(null)
     setSelectedMonth('')
@@ -458,7 +462,7 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Click a bar to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" radius={[4, 4, 0, 0]} onClick={(_, index) => setSelectedBinIndex((current) => current === index ? null : index)}>{analysis.bins.map((bin, index) => <Cell key={bin.label} fill={selectedBinIndex === index ? '#5145b8' : '#7b72df'} opacity={selectedBinIndex === null || selectedBinIndex === index ? 1 : .35} />)}</Bar></BarChart></ResponsiveContainer></div></article>
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Click a month to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }} onClick={(state) => state?.activeLabel && setSelectedMonth((current) => current === state.activeLabel ? '' : state.activeLabel)}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} />{selectedMonth && <ReferenceLine x={selectedMonth} stroke="#147454" strokeDasharray="4 3" />}<Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></article>
     </div>
-    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">SUPPORTING TAXA</span><h2>{selectedBin || selectedMonth ? 'Taxa for the chart selection' : 'Taxa ranked by mean A'}</h2><p>{selectedBin || selectedMonth ? `${selectedBin ? `A ${selectedBin.label}` : ''}${selectedBin && selectedMonth ? ' · ' : ''}${selectedMonth ? monthLabel(selectedMonth) : ''} · ${selectedRows.length} observations` : 'Minimum read filter applies before aggregation'}</p></div>{(selectedBin || selectedMonth) && <button className="secondary" onClick={() => { setSelectedBinIndex(null); setSelectedMonth('') }}>Clear chart selection</button>}</div><div className="damage-table-filters"><label className="analysis-search"><Search size={16} /><input type="search" value={tableQuery} placeholder="Filter taxa…" onChange={(event) => setTableQuery(event.target.value)} /></label><FilterSelect label="Biological group" value={tableKingdom} options={tableKingdoms} onChange={setTableKingdom} /><label className="filter-field"><span>Minimum libraries</span><input type="number" min="1" step="1" value={minimumLibraries} onChange={(event) => setMinimumLibraries(event.target.value)} /></label><small>Showing {supportingTaxa.length} of {selectedTaxa.length} taxa</small></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Biological group</th><th title={A_DEFINITION}>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{supportingTaxa.length ? supportingTaxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>) : <tr><td colSpan="5" className="damage-table-empty">No taxa match these table filters.</td></tr>}</tbody></table></div></article>
+    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">SUPPORTING TAXA</span><h2>{selectedBin || selectedMonth ? 'Taxa for the chart selection' : 'Taxa ranked by mean A'}</h2><p>{selectedBin || selectedMonth ? `${selectedBin ? `A ${selectedBin.label}` : ''}${selectedBin && selectedMonth ? ' · ' : ''}${selectedMonth ? monthLabel(selectedMonth) : ''} · ${selectedRows.length} observations` : 'Click a column heading to sort; minimum read filter applies before aggregation'}</p></div>{(selectedBin || selectedMonth) && <button className="secondary" onClick={() => { setSelectedBinIndex(null); setSelectedMonth('') }}>Clear chart selection</button>}</div><div className="table-scroll"><table><thead><tr>{sortableHeader('name', 'Taxon')}{sortableHeader('kingdom', 'Biological group')}{sortableHeader('meanA', 'Mean A', A_DEFINITION)}{sortableHeader('reads', 'Reads')}{sortableHeader('libraries', 'Libraries')}</tr></thead><tbody>{sortedTaxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
   </section>
 }
 

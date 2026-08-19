@@ -321,10 +321,9 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 .damage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .damage-table td:first-child { color: #283b32; }
 .damage-table td strong { color: #675bc7; }
-.damage-table-filters { padding: 13px 19px; border-bottom: 1px solid #edf1ee; display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, .55fr) minmax(130px, .4fr) auto; align-items: end; gap: 12px; background: #fbfcfb; }
-.damage-table-filters .analysis-search { width: 100%; height: 38px; }
-.damage-table-filters > small { align-self: center; color: #7e8b84; font-size: 10px; white-space: nowrap; }
-.damage-table-empty { padding: 30px !important; color: #89958f; text-align: center !important; }
+.damage-table th button { border: 0; padding: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.damage-table th button span { color: #a3ada8; font-size: 11px; }
+.damage-table th button:hover, .damage-table th button.active { color: #5548b2; }
 .run-grid { display: grid; grid-template-columns: minmax(380px, 1fr) minmax(340px, .9fr); gap: 14px; }
 .run-groups, .run-libraries { overflow: hidden; max-height: 650px; }
 .run-group-list { overflow-y: auto; max-height: 570px; }
@@ -340,8 +339,6 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
 
 @media (max-width: 1200px) {
   .pcoa-filters { grid-template-columns: repeat(3, 1fr); }
-  .damage-table-filters { grid-template-columns: 1fr 1fr 1fr; }
-  .damage-table-filters > small { grid-column: 1 / -1; }
   .compare-controls { grid-template-columns: 1fr auto 1fr; }
   .compare-controls > .filter-field:nth-last-child(-n+2) { margin-top: 2px; }
 }
@@ -355,7 +352,6 @@ nav button.active { color: white; background: #173d31; box-shadow: inset 3px 0 #
   .sidebar nav > button { flex: 0 0 auto; }
   .analysis-search { width: 100%; }
   .analysis-filters, .pcoa-filters, .damage-filters, .run-filters { grid-template-columns: 1fr 1fr; }
-  .damage-table-filters { grid-template-columns: 1fr; }
   .analysis-metrics { grid-template-columns: 1fr 1fr; }
   .analysis-metrics > div:nth-child(3) { border-left: 0; border-top: 1px solid #edf1ee; }
   .analysis-metrics > div:nth-child(4) { border-top: 1px solid #edf1ee; }
