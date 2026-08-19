@@ -145,16 +145,13 @@ def main():
                 taxon_group["aSum"] += damage * reads
                 taxon_group["aReads"] += reads
 
-            # Warning totals and baselines stay genus-based even though the
-            # interactive analyses can now switch rank.
-            if rank == "genus":
-                library_group = library_groups[
-                    (library_id, month, control_type, kingdom, pipeline)
-                ]
-                library_group["reads"] += reads
-                if reads > library_group["topReads"]:
-                    library_group["topTaxon"] = taxon
-                    library_group["topReads"] = reads
+            library_group = library_groups[
+                (rank, library_id, month, control_type, kingdom, pipeline)
+            ]
+            library_group["reads"] += reads
+            if reads > library_group["topReads"]:
+                library_group["topTaxon"] = taxon
+                library_group["topReads"] = reads
 
             if library_id:
                 lineage = compact_lineage(path, kingdom, taxon)
@@ -215,8 +212,8 @@ def main():
 
     baseline_values = defaultdict(list)
     for key, values in library_groups.items():
-        if key[0]:
-            baseline_values[(key[2], key[3], key[4])].append(values["reads"])
+        if key[1]:
+            baseline_values[(key[0], key[3], key[4], key[5])].append(values["reads"])
     baselines = {
         key: anomaly_baseline(values)
         for key, values in baseline_values.items()
@@ -225,20 +222,21 @@ def main():
 
     library_warnings = []
     for key, values in sorted(library_groups.items()):
-        baseline_key = (key[2], key[3], key[4])
-        if not key[0] or baseline_key not in baselines:
+        baseline_key = (key[0], key[3], key[4], key[5])
+        if not key[1] or baseline_key not in baselines:
             continue
         median, threshold = baselines[baseline_key]
         if values["reads"] <= threshold:
             continue
         library_warnings.append(
             {
-                "libraryId": key[0],
-                "date": library_metadata.get(key[0], {}).get("date", key[1]),
-                "month": key[1],
-                "controlType": key[2],
-                "kingdom": key[3],
-                "pipeline": key[4],
+                "rank": key[0],
+                "libraryId": key[1],
+                "date": library_metadata.get(key[1], {}).get("date", key[2]),
+                "month": key[2],
+                "controlType": key[3],
+                "kingdom": key[4],
+                "pipeline": key[5],
                 "reads": values["reads"],
                 "baseline": round(median),
                 "threshold": round(threshold),
@@ -330,7 +328,7 @@ def main():
             library_warnings, key=lambda row: (row["date"], row["reads"]), reverse=True
         ),
         "warningMethod": (
-            "Genus-level total above median + 3 scaled MAD within control type, biological group and "
+            "Selected-rank total above median + 3 scaled MAD within control type, biological group and "
             "pipeline (minimum 4 libraries)."
         ),
     }

@@ -50,7 +50,7 @@ function PrevalenceTooltip({ active, payload }) {
   return <div className="chart-tooltip landscape-tooltip"><b>{point.name}</b><small>{point.kingdom}</small><div>Prevalence<span>{point.prevalence.toFixed(1)}%</span></div><div>Mean relative abundance<span>{point.meanAbundance.toFixed(3)}%</span></div><div>Detected in<span>{point.detectedLibraries} of {point.eligibleLibraries} libraries</span></div><div>Total reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? '—' : point.meanA.toFixed(3)}</span></div><em>Click to open Taxon Explorer</em></div>
 }
 
-export function PrevalenceExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
+export function PrevalenceExplorer({ rankFilter, records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [controlType, setControlType] = useState('All')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -111,6 +111,7 @@ export function PrevalenceExplorer({ records = [], minReads, onMinReadsChange, o
       { title: 'Use the four regions', text: 'Upper-right taxa are both common and abundant; lower-right taxa are recurring low-level background. Click any point for its taxon history.' },
     ]} />
     <div className="panel explorer-filters landscape-filters">
+      {rankFilter}
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
@@ -131,7 +132,7 @@ export function PrevalenceExplorer({ records = [], minReads, onMinReadsChange, o
     <p className="analysis-method-note">The vertical guide marks 50% prevalence; the horizontal guide is the median abundance among visible taxa. Relative abundance is calculated against all assigned taxon reads in each eligible library. Click any point to inspect that taxon.</p>
   </section>
 }
-export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "", minReads, onMinReadsChange, onSelectTaxon, onOpenLibrary }) {
+export function TaxonExplorer({ rankFilter, records = [], warnings = [], selectedTaxon = "", minReads, onMinReadsChange, onSelectTaxon, onOpenLibrary }) {
   const taxon = selectedTaxon
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -233,6 +234,7 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
         : <div className="taxon-wiki-state"><span>Choose a taxon to load background information.</span></div>}
     </article>
     <div className="panel explorer-filters analysis-filters">
+      {rankFilter}
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
@@ -268,7 +270,7 @@ function summarizeLibrary(rows) {
   return { reads, profile, meanA: aReads ? aSum / aReads : null }
 }
 
-export function LibraryComparison({ records = [], metadata = [], warnings = [], comparisonLibraries = [], minReads, onMinReadsChange, onComparisonChange, onOpenTaxon, onOpenLibrary }) {
+export function LibraryComparison({ rankFilter, records = [], metadata = [], warnings = [], comparisonLibraries = [], minReads, onMinReadsChange, onComparisonChange, onOpenTaxon, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -330,6 +332,7 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
       { title: 'Compare each taxon', text: 'The paired bars show that taxon’s share in A and B. Click its name for the full taxon history, or click a library heading for its Krona view.' },
     ]} />
     <div className="panel compare-controls">
+      {rankFilter}
       <label className="filter-field"><span>Library A</span><div className="select-wrap"><select value={left} onChange={(event) => onComparisonChange([event.target.value, right].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <span className="compare-vs"><GitCompareArrows size={18} />VS</span>
       <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => onComparisonChange([left, event.target.value].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
@@ -355,7 +358,7 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
   </section>
 }
 
-export function DamageExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
+export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -401,6 +404,7 @@ export function DamageExplorer({ records = [], minReads, onMinReadsChange, onOpe
       { title: 'Check supporting evidence', text: 'Use minimum reads and minimum A to reduce weak observations. The table shows which taxa support the highest remaining values.' },
     ]} />
     <div className="panel explorer-filters damage-filters">
+      {rankFilter}
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
@@ -427,7 +431,7 @@ function metadataGroup(meta, field) {
   return meta[field] || 'Unknown'
 }
 
-export function RunQcExplorer({ records = [], metadata = [], warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
+export function RunQcExplorer({ rankFilter, records = [], metadata = [], warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
   const [groupField, setGroupField] = useState('date')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -481,6 +485,7 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], minR
       { title: 'Drill down before concluding', text: 'Select a group to list its libraries, then open individual libraries for taxonomy. Group patterns are clues, not proof of a source.' },
     ]} />
     <div className="panel explorer-filters run-filters">
+      {rankFilter}
       <label className="filter-field"><span>Group by</span><div className="select-wrap"><select value={groupField} onChange={(event) => { setGroupField(event.target.value); setSelectedGroup('') }}>{Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
@@ -576,7 +581,7 @@ function buildCooccurrence(rows, maxTaxa, minimumShared) {
   return { nodes: laidOut, nodeMap, edges, libraryCount: libraries.size, taxonCount: taxa.size }
 }
 
-export function CooccurrenceExplorer({ records = [], minReads, onMinReadsChange, onOpenTaxon }) {
+export function CooccurrenceExplorer({ rankFilter, records = [], minReads, onMinReadsChange, onOpenTaxon }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
@@ -604,6 +609,7 @@ export function CooccurrenceExplorer({ records = [], minReads, onMinReadsChange,
       { title: 'Association is not interaction', text: 'Taxa can appear together because of shared reagents, environments, or broad prevalence. This network does not prove a biological relationship.' },
     ]} />
     <div className="panel explorer-filters network-filters">
+      {rankFilter}
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>

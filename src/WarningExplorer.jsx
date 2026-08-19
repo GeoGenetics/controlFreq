@@ -27,7 +27,7 @@ function WarningTooltip({ active, payload, label }) {
   return <div className="chart-tooltip"><b>{monthLabel(label)}</b>{payload.filter((item) => item.value).map((item) => <div key={item.name}><i style={{ background: item.color }} />{item.name}<span>{item.value} warnings</span></div>)}</div>
 }
 
-export default function WarningExplorer({ warnings = [], warningMethod, onOpenLibrary, onOpenTaxon }) {
+export default function WarningExplorer({ rankFilter, warnings = [], warningMethod, onOpenLibrary, onOpenTaxon }) {
   const [controlType, setControlType] = useState('All')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -94,12 +94,13 @@ export default function WarningExplorer({ warnings = [], warningMethod, onOpenLi
   return <section className="warning-page">
     <div className="explorer-hero"><div><span className="kicker">LIBRARY WARNINGS</span><h1>Warnings explorer</h1><p>Review unusually high contamination signals and the libraries behind them.</p></div><span className={`warning-count large ${filtered.length ? 'active' : ''}`}><AlertTriangle size={14} />{filtered.length}</span></div>
     <PageGuide items={[
-      { title: 'Warnings are comparison results', text: 'Each row is one library, biological-group, and pipeline combination that exceeded its robust baseline—not necessarily one failed library.' },
+      { title: 'Warnings are comparison results', text: 'Each row is one library, selected rank, biological group, and pipeline combination that exceeded its robust baseline—not necessarily one failed library.' },
       { title: 'Use the chart to find periods', text: 'Bar height is the number of warning rows in each month. Separate colours show extraction and library negatives.' },
       { title: 'Sort, filter, then investigate', text: 'Narrow by date, control type, biological group, pipeline, reads, or text. Open the library for its taxonomy or the leading taxon for its recurrence history.' },
     ]} />
 
     <div className="panel warning-filters">
+      {rankFilter}
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />

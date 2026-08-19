@@ -92,7 +92,7 @@ function Sunburst({ tree, focusPath, onFocus, onOpenTaxon }) {
   </div>
 }
 
-export default function LibraryExplorer({ records = [], rank = 'genus', warnings = [], warningMethod, selectedLibrary, minReads, onMinReadsChange, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
+export default function LibraryExplorer({ rankFilter, records = [], rank = 'genus', warnings = [], warningMethod, selectedLibrary, minReads, onMinReadsChange, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -206,14 +206,15 @@ export default function LibraryExplorer({ records = [], rank = 'genus', warnings
             <span className="warning-guide-icon">{libraryWarnings.length ? <AlertTriangle size={18} /> : <Sparkles size={18} />}</span>
             <div><span className="kicker">HOW WARNINGS WORK</span><h2>{libraryWarnings.length ? `Flagged in ${libraryWarnings.length} comparison ${libraryWarnings.length === 1 ? "group" : "groups"}` : "No warning for this library"}</h2><p>A warning is a statistical review flag, not a pipeline failure or proof of a contamination source.</p></div>
           </div>
-          <div className="warning-guide-method"><b>Trigger</b><span>{warningMethod || "Above median + 3 scaled MAD among comparable libraries (minimum 4 libraries)."}</span><small>Libraries are compared only within the same control type, biological group, and pipeline.</small></div>
+          <div className="warning-guide-method"><b>Trigger</b><span>{warningMethod || "Above median + 3 scaled MAD among comparable libraries (minimum 4 libraries)."}</span><small>Libraries are compared only within the same rank, control type, biological group, and pipeline.</small></div>
           {libraryWarnings.length > 0 ? <div className="library-warning-details">{libraryWarnings.map((item) => <div key={[item.month, item.kingdom, item.pipeline].join("-")}>
-            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: <button className="taxon-link compact" onClick={() => onOpenTaxon(item.topTaxon, 'genus')}>{item.topTaxon || "Unknown"}</button></em></span>
+            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: <button className="taxon-link compact" onClick={() => onOpenTaxon(item.topTaxon, item.rank || rank)}>{item.topTaxon || "Unknown"}</button></em></span>
             <span><strong>{item.reads.toLocaleString()} reads</strong><small>Baseline median {item.baseline.toLocaleString()} · threshold {item.threshold.toLocaleString()}</small><em>{item.fold ? item.fold + "× the median" : "Baseline median is zero"}</em></span>
           </div>)}</div> : <div className="library-warning-clear"><span />This library does not exceed the robust baseline in any comparison group.</div>}
         </article>
 
         <div className="panel explorer-filters">
+          {rankFilter}
           <SelectFilter label="Pipeline" value={pipeline} options={pipelines} onChange={setPipeline} />
           <SelectFilter label="Biological group" value={kingdom} options={kingdoms} onChange={setKingdom} />
           <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>

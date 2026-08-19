@@ -57,11 +57,11 @@ log-scaled viridis colour scale. Date headings open all matching libraries, taxo
 labels open Taxon Explorer, and populated cells open the matching month/taxon
 library list before drilling into the selected library's Krona view.
 
-Library Warnings is a dedicated Monitor tab with exact-date, control-type,
-kingdom, pipeline, minimum-warning-read, and text filters. Its sortable table
+Library Warnings is a dedicated Monitor tab with taxonomic-rank, exact-date,
+control-type, biological-group, pipeline, minimum-warning-read, and text filters. Its sortable table
 links library IDs to Library Explorer and leading taxa to Taxon Explorer. A
 monthly grouped bar chart compares warning frequency between extraction and
-library negatives. Warnings use total genus-level reads and flag values above
+library negatives. Warnings use total reads at the selected rank and flag values above
 the median plus three scaled median absolute deviations
 within each control type, biological group, and pipeline group. At least four libraries
 are required to establish a baseline, and warnings default to newest-first in a

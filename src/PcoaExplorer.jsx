@@ -103,7 +103,7 @@ function PcoaTooltip({ active, payload }) {
   return <div className="pcoa-tooltip"><b>{point.libraryId}</b><span>{point.controlType} · {point.month}</span><span>{point.pipeline}</span><strong>{point.reads.toLocaleString()} reads</strong>{point.warning && <em><AlertTriangle size={11} />Flagged library</em>}</div>
 }
 
-export default function PcoaExplorer({ records = [], rank = 'genus', warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
+export default function PcoaExplorer({ rankFilter, records = [], rank = 'genus', warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [controlType, setControlType] = useState('All')
@@ -141,6 +141,7 @@ export default function PcoaExplorer({ records = [], rank = 'genus', warnings = 
     ]} />
 
     <div className="panel explorer-filters pcoa-filters">
+      {rankFilter}
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
