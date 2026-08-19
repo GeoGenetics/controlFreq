@@ -139,6 +139,7 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
   const [kingdom, setKingdom] = useState('All')
   const [minA, setMinA] = useState('')
   const [wiki, setWiki] = useState({ status: 'idle' })
+  const [selectedOccurrence, setSelectedOccurrence] = useState(null)
 
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
@@ -234,6 +235,17 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
       })),
     }
   }, [rows])
+  useEffect(() => setSelectedOccurrence(null), [taxon, pipeline, kingdom, minReads, minA, rank])
+  const displayedLibraries = selectedOccurrence
+    ? summary.libraries.filter((item) => item.month === selectedOccurrence.month && item.controlType === selectedOccurrence.controlType)
+    : summary.libraries
+  const toggleOccurrence = (month, controlType) => {
+    if (!month) return
+    setSelectedOccurrence((current) => current?.month === month && current?.controlType === controlType
+      ? null
+      : { month, controlType })
+  }
+
 
   return <section className="analysis-page">
     <div className="explorer-hero">
@@ -243,7 +255,7 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
     <PageGuide items={[
       { title: 'Search one taxon', text: 'Choose a name at any taxonomic rank to follow it across control libraries and months. Selecting a result automatically changes the rank filter when needed. The Wikipedia card is external background information, not part of your sequencing result.' },
       { title: 'Compare the control types', text: 'Each month has separate bars for extraction negatives and library negatives. Bar height is assigned reads, while fill colour represents read-weighted A.' },
-      { title: 'Open the contributing libraries', text: 'The list on the right shows where the taxon was detected. Click a library to inspect its full Krona-style taxonomy.' },
+      { title: 'Open the contributing libraries', text: 'Click a bar to show the libraries contributing to that month and control type. Then click a library to inspect its full Krona-style taxonomy.' },
     ]} />
     <article className="panel taxon-wiki-card">
       {wiki.status === 'loading' ? <div className="taxon-wiki-state"><LoaderCircle className="spin" size={18} /><span>Looking up {taxon} on Wikipedia…</span></div>
@@ -267,12 +279,12 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
     ]} />
     <div className="analysis-grid">
       <article className="panel analysis-chart-panel">
-        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Grouped by control type; bar height is reads and fill colour is mean A</p></div><div className="recurrence-legends"><div className="control-type-legend">{summary.controlTypes.map((type) => <span key={type}><i style={{ borderColor: CONTROL_TYPE_STROKES[type] || '#65756d' }} />{type}</span>)}</div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div></div>
-        {summary.timeline.length ? <div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} />{summary.controlTypes.map((type) => <Bar key={type} name={type} dataKey={(point) => point.controls[type]?.reads || 0} radius={[4, 4, 0, 0]}>{summary.timeline.map((point) => <Cell key={point.month} fill={aColor(point.controls[type]?.meanA)} stroke={CONTROL_TYPE_STROKES[type] || '#65756d'} strokeWidth={3} />)}</Bar>)}</BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
+        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Click a bar to show its contributing libraries; height is reads and fill is mean A</p></div><div className="recurrence-legends"><div className="control-type-legend">{summary.controlTypes.map((type) => <span key={type}><i style={{ borderColor: CONTROL_TYPE_STROKES[type] || '#65756d' }} />{type}</span>)}</div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div></div>
+        {summary.timeline.length ? <div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} />{summary.controlTypes.map((type) => <Bar key={type} name={type} dataKey={(point) => point.controls[type]?.reads || 0} radius={[4, 4, 0, 0]} onClick={(_, index) => toggleOccurrence(summary.timeline[index]?.month, type)}>{summary.timeline.map((point) => { const active = selectedOccurrence?.month === point.month && selectedOccurrence?.controlType === type; return <Cell key={point.month} fill={aColor(point.controls[type]?.meanA)} stroke={active ? '#172f26' : CONTROL_TYPE_STROKES[type] || '#65756d'} strokeWidth={active ? 4 : 3} opacity={!selectedOccurrence || active ? 1 : .28} /> })}</Bar>)}</BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
       </article>
       <article className="panel analysis-list-panel">
-        <div className="panel-head"><div><span className="kicker">LIBRARIES</span><h2>Where it appears</h2><p>{summary.libraries.length} matching libraries</p></div></div>
-        <div className="analysis-list">{summary.libraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b><i className="a-dot" style={{ background: aColor(item.aReads ? item.aSum / item.aReads : null) }} />{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `A ${(item.aSum / item.aReads).toFixed(3)}` : 'A —'}</small></strong><ArrowRight size={14} /></button>)}</div>
+        <div className="panel-head"><div><span className="kicker">LIBRARIES</span><h2>{selectedOccurrence ? `${monthLabel(selectedOccurrence.month)} · ${selectedOccurrence.controlType}` : 'Where it appears'}</h2><p>{displayedLibraries.length} matching {displayedLibraries.length === 1 ? 'library' : 'libraries'}</p></div>{selectedOccurrence && <button className="secondary" onClick={() => setSelectedOccurrence(null)}>Show all</button>}</div>
+        <div className="analysis-list">{displayedLibraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b><i className="a-dot" style={{ background: aColor(item.aReads ? item.aSum / item.aReads : null) }} />{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `A ${(item.aSum / item.aReads).toFixed(3)}` : 'A —'}</small></strong><ArrowRight size={14} /></button>)}</div>
       </article>
     </div>
   </section>
