@@ -17,6 +17,7 @@ const CONTROL_TYPE_STROKES = {
   'Extraction Negative': '#147454',
   'Library Negative': '#6659bd',
 }
+const A_DEFINITION = 'C→T frequency at the 5′ end, base position 1, corrected for the background substitution rate'
 const fmt = (value) => Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
 const aColor = (value) => {
   if (value === null || value === undefined || !Number.isFinite(value)) return "#d8dfdc"
@@ -362,6 +363,8 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [minimumA, setMinimumA] = useState('')
+  const [selectedBinIndex, setSelectedBinIndex] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState('')
   const dimensions = useMemo(() => ({
     pipelines: [...new Set(records.map((row) => row.pipeline))].sort(),
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
@@ -376,7 +379,7 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
     const maxA = Math.max(.1, ...rows.map((row) => row.meanA))
     const ceiling = Math.ceil(maxA * 10) / 10
     const width = ceiling / 10
-    const bins = Array.from({ length: 10 }, (_, index) => ({ label: `${(index * width).toFixed(2)}–${((index + 1) * width).toFixed(2)}`, observations: 0 }))
+    const bins = Array.from({ length: 10 }, (_, index) => ({ index, min: index * width, max: (index + 1) * width, label: `${(index * width).toFixed(2)}–${((index + 1) * width).toFixed(2)}`, observations: 0 }))
     const months = new Map(); const taxa = new Map()
     for (const row of rows) {
       const index = Math.min(9, Math.floor(row.meanA / width))
@@ -393,14 +396,32 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
       taxa: [...taxa.values()].map((item) => ({ ...item, meanA: item.aSum / item.reads })).sort((a, b) => b.meanA - a.meanA).slice(0, 50),
     }
   }, [rows])
+  const selectedBin = selectedBinIndex === null ? null : analysis.bins[selectedBinIndex]
+  const selectedRows = useMemo(() => rows.filter((row) => {
+    if (selectedMonth && row.month !== selectedMonth) return false
+    if (!selectedBin) return true
+    return row.meanA >= selectedBin.min && (selectedBin.index === 9 ? row.meanA <= selectedBin.max : row.meanA < selectedBin.max)
+  }), [rows, selectedBin, selectedMonth])
+  const selectedTaxa = useMemo(() => {
+    const taxa = new Map()
+    for (const row of selectedRows) {
+      const item = taxa.get(row.name) || { name: row.name, kingdom: row.kingdom, reads: 0, aSum: 0, libraries: new Set() }
+      item.reads += row.reads; item.aSum += row.meanA * row.reads; item.libraries.add(row.libraryId); taxa.set(row.name, item)
+    }
+    return [...taxa.values()].map((item) => ({ ...item, meanA: item.aSum / item.reads })).sort((a, b) => b.meanA - a.meanA).slice(0, 50)
+  }, [selectedRows])
+  useEffect(() => {
+    setSelectedBinIndex(null)
+    setSelectedMonth('')
+  }, [records, pipeline, kingdom, minReads, minimumA])
   const totalReads = rows.reduce((sum, row) => sum + row.reads, 0)
   const weightedA = totalReads ? rows.reduce((sum, row) => sum + row.meanA * row.reads, 0) / totalReads : null
 
   return <section className="analysis-page">
-    <div className="explorer-hero"><div><span className="kicker">DAMAGE / A</span><h1>Damage overview</h1><p>Explore read-weighted A estimates across taxa, libraries, and time.</p></div></div>
+    <div className="explorer-hero"><div><span className="kicker">DAMAGE / A</span><h1>Damage overview</h1><p>A is the {A_DEFINITION}. Explore it across taxa, libraries, and time.</p></div></div>
     <PageGuide items={[
-      { title: 'A comes from the pipeline', text: 'This dashboard summarizes the A estimate already present in your data. Its biological interpretation depends on how your pipeline calculated it.' },
-      { title: 'Read the two plots', text: 'The distribution counts observations at different A values; the timeline shows the read-weighted mean A for each month.' },
+      { title: 'What A means', text: `A is the ${A_DEFINITION}.` },
+      { title: 'Use the two plots', text: 'The distribution counts observations at different A values; the timeline shows the read-weighted mean A for each month. Click a bar or month to inspect its supporting taxa.' },
       { title: 'Check supporting evidence', text: 'Use minimum reads and minimum A to reduce weak observations. The table shows which taxa support the highest remaining values.' },
     ]} />
     <div className="panel explorer-filters damage-filters">
@@ -417,10 +438,10 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
       { label: 'Assigned reads', value: fmt(totalReads), detail: 'With A estimate' },
     ]} />
     <div className="damage-grid">
-      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Count of library-taxon observations</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" fill="#7b72df" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></article>
-      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Read-weighted by month</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} /><Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div></article>
+      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Click a bar to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" radius={[4, 4, 0, 0]} onClick={(_, index) => setSelectedBinIndex((current) => current === index ? null : index)}>{analysis.bins.map((bin, index) => <Cell key={bin.label} fill={selectedBinIndex === index ? '#5145b8' : '#7b72df'} opacity={selectedBinIndex === null || selectedBinIndex === index ? 1 : .35} />)}</Bar></BarChart></ResponsiveContainer></div></article>
+      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Click a month to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }} onClick={(state) => state?.activeLabel && setSelectedMonth((current) => current === state.activeLabel ? '' : state.activeLabel)}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} />{selectedMonth && <ReferenceLine x={selectedMonth} stroke="#147454" strokeDasharray="4 3" />}<Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></article>
     </div>
-    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">HIGHEST DAMAGE</span><h2>Taxa ranked by mean A</h2><p>Minimum read filter applies before aggregation</p></div></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Biological group</th><th>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{analysis.taxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
+    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">SUPPORTING TAXA</span><h2>{selectedBin || selectedMonth ? 'Taxa for the chart selection' : 'Taxa ranked by mean A'}</h2><p>{selectedBin || selectedMonth ? `${selectedBin ? `A ${selectedBin.label}` : ''}${selectedBin && selectedMonth ? ' · ' : ''}${selectedMonth ? monthLabel(selectedMonth) : ''} · ${selectedRows.length} observations` : 'Minimum read filter applies before aggregation'}</p></div>{(selectedBin || selectedMonth) && <button className="secondary" onClick={() => { setSelectedBinIndex(null); setSelectedMonth('') }}>Clear chart selection</button>}</div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Biological group</th><th title={A_DEFINITION}>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{selectedTaxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
   </section>
 }
 
