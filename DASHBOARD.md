@@ -15,8 +15,8 @@ The generated JSON retains monthly summaries by taxon, control type, biological 
 pipeline, and standard taxonomic rank, plus compact per-library lineages and run
 metadata. PREFILTER assignments are split into distinct Bacteria and Archaea
 biological groups. Genus data ships in the initial payload; other ranks are
-split into smaller files and loaded only when selected. A global rank selector
-is shared by the analysis tabs and defaults to genus. The dashboard filters these summaries by taxon, assigned reads, mean A,
+split into smaller files and loaded only when selected. The rank selector lives in Overview's Filter data panel, carries across
+analysis tabs, and defaults to genus. The dashboard filters these summaries by taxon, assigned reads, mean A,
 control, biological group, pipeline, and date. Minimum nreads defaults to 50 and is
 synchronized across every relevant tab while the dashboard is open.
 

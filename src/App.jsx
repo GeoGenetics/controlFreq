@@ -329,7 +329,6 @@ function App() {
 
       <main id="top">
         {navigationHistory.length > 0 && <button className="context-back" onClick={goBack}><ChevronLeft size={15} />Back to {TAB_LABELS[navigationHistory.at(-1).tab] || 'previous page'}</button>}
-        {!["changelog", "warnings"].includes(activeTab) && <div className="global-rank-control"><span>Taxonomic rank</span><div className="select-wrap"><select value={rank} onChange={(event) => { setRank(event.target.value); setSelectedTaxon('') }}>{rankOptions.map((item) => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}</select><ChevronDown size={15} /></div><small>{loadingRank === rank ? 'Loading ' + rank + ' data…' : 'Shared across analysis tabs · 50 reads by default'}</small></div>}
         {activeTab === "overview" ? <>
         <header className="topbar">
           <div><div className="eyebrow"><span /> LAB MONITORING</div><h1>Contamination overview</h1><p>Track recurring taxa and changes across negative controls.</p></div>
@@ -337,7 +336,7 @@ function App() {
         </header>
 
         <PageGuide items={[
-          { title: 'Start with filters', text: 'Choose a taxonomic rank above, then use these filters to narrow every number and plot. Rank defaults to genus; minimum nreads defaults to 50 and stays synchronized with the other analysis tabs.' },
+          { title: 'Start with filters', text: 'Choose a taxonomic rank here, then use the remaining filters to narrow every number and plot. Rank defaults to genus; minimum nreads defaults to 50 and stays synchronized with the other analysis tabs.' },
           { title: 'Read the patterns', text: 'Recent Changes defaults to the newest two matching months, or lets you select any other pair. The timeline shows longer-term volume and the viridis heatmap shows which taxa drive it; click taxon names or chart cells to investigate.' },
           { title: 'Read the summary cards', text: 'Peak libraries is the largest distinct-library count behind one visible taxon, month, control type, biological group, and pipeline result. Latest load sums all visible assigned reads in the newest matching month.' },
         ]} />
@@ -345,6 +344,7 @@ function App() {
         <section className="filter-panel" id="filters">
           <div className="filter-title"><SlidersHorizontal size={17} /><b>Filter data</b><span>{filtered.length} {rank}-month observations</span></div>
           <div className="filter-grid">
+            <label className="filter-field"><span>{loadingRank === rank ? 'Taxonomic rank · Loading…' : 'Taxonomic rank'}</span><div className="select-wrap"><select value={rank} onChange={(event) => { setRank(event.target.value); setSelectedTaxon('') }}>{rankOptions.map((item) => <option key={item} value={item}>{item[0].toUpperCase() + item.slice(1)}</option>)}</select><ChevronDown size={15} /></div></label>
             <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
             <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
             <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />

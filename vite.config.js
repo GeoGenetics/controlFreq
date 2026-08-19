@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 function readChangeLog() {
   try {
     return execFileSync('git', [
-      'log', '-50', '--date=iso-strict',
+      'log', '--date=iso-strict',
       '--pretty=format:%h%x1f%aI%x1f%s%x1e',
     ], { encoding: 'utf8' })
       .split('\x1e')
