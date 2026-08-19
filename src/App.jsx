@@ -26,7 +26,7 @@ const COLORS = {
 const TAB_LABELS = {
   overview: 'Overview', warnings: 'Library warnings', library: 'Library explorer',
   compare: 'Compare libraries', pcoa: 'PCoA', taxon: 'Taxon explorer',
-  prevalence: 'Taxa landscape', cooccurrence: 'Co-occurrence', damage: 'Damage / A', run: 'Run / batch QC',
+  prevalence: 'Taxa landscape', cooccurrence: 'Co-occurrence', damage: 'Damage / C→T', run: 'Run / batch QC',
   changelog: 'Changelog',
 }
 const RANK_ORDER = ['phylum', 'class', 'order', 'family', 'genus', 'species']
@@ -345,7 +345,7 @@ function App() {
           <button className={activeTab === "prevalence" ? "active" : ""} onClick={() => navigateTo("prevalence")}><ChartScatter size={18} />Taxa landscape</button>
           <button className={activeTab === "cooccurrence" ? "active" : ""} onClick={() => navigateTo("cooccurrence")}><Network size={18} />Co-occurrence</button>
           <small>QUALITY</small>
-          <button className={activeTab === "damage" ? "active" : ""} onClick={() => navigateTo("damage")}><Sparkles size={18} />Damage / A</button>
+          <button className={activeTab === "damage" ? "active" : ""} onClick={() => navigateTo("damage")}><Sparkles size={18} />Damage / C→T</button>
           <button className={activeTab === "run" ? "active" : ""} onClick={() => navigateTo("run")}><Database size={18} />Run / batch QC</button>
           <small>ABOUT</small>
           <button className={activeTab === "changelog" ? "active" : ""} onClick={() => navigateTo("changelog")}><History size={18} />Changelog</button>
@@ -375,12 +375,12 @@ function App() {
             <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
             <label className="filter-field"><span>Taxon</span><input type="search" list="taxa-options" placeholder="All taxa" value={taxon} onChange={(event) => setTaxon(event.target.value)} /><datalist id="taxa-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
             <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => setMinReads(event.target.value)} /></label>
-            <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
+            <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
             <label className="filter-field"><span>From</span><input type="month" min={dimensions.months[0]} max={dimensions.months.at(-1)} value={from} onChange={(event) => setFrom(event.target.value)} /></label>
             <label className="filter-field"><span>To</span><input type="month" min={dimensions.months[0]} max={dimensions.months.at(-1)} value={to} onChange={(event) => setTo(event.target.value)} /></label>
             <button className="reset" onClick={reset}><RotateCcw size={15} />Reset</button>
           </div>
-          <p className="filter-note">The nreads threshold is shared with every analysis page. Here it applies to each {rank}/month group; mean A is weighted by assigned reads.</p>
+          <p className="filter-note">The nreads threshold is shared with every analysis page. Here it applies to each {rank}/month group; mean 5′ C→T is weighted by assigned reads.</p>
         </section>
 
         <section className="metrics" id="overview">
@@ -429,7 +429,7 @@ function App() {
         <section className="bottom-grid overview-taxa-only" id="taxa">
           <article className="panel table-panel">
             <div className="panel-head"><div><span className="kicker">TAXA EXPLORER</span><h2>Most abundant contaminants</h2><p>Trend is the read-count change from the previous to the latest matching month</p></div><label className="search"><Search size={16} /><input placeholder="Search results..." value={query} onChange={(event) => setQuery(event.target.value)} /></label></div>
-            <div className="table-scroll"><table><thead><tr><SortHeader label="Taxon" column="taxon" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Biological group" column="kingdom" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Assigned reads" column="reads" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Mean A" column="meanA" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Trend" column="trend" sort={taxaSort} onSort={changeTaxaSort} title="Percent change in reads from the previous to the latest matching month" /></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`} title="Change in reads from the previous to latest matching month">{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
+            <div className="table-scroll"><table><thead><tr><SortHeader label="Taxon" column="taxon" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Biological group" column="kingdom" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Assigned reads" column="reads" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Mean 5′ C→T" column="meanA" sort={taxaSort} onSort={changeTaxaSort} /><SortHeader label="Trend" column="trend" sort={taxaSort} onSort={changeTaxaSort} title="Percent change in reads from the previous to the latest matching month" /></tr></thead><tbody>{visibleTaxa.map((item, index) => <tr key={`${item.kingdom}-${item.name}`}><td><span className="rank">{String(index + 1).padStart(2, '0')}</span><button className="taxon-link" onClick={() => openTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><b>{item.reads.toLocaleString()}</b></td><td>{item.meanA === null ? '-' : item.meanA.toFixed(3)}</td><td><span className={`trend ${item.change >= 0 ? 'up' : 'down'}`} title="Change in reads from the previous to latest matching month">{item.change >= 0 ? '+' : ''}{item.change}%</span></td></tr>)}</tbody></table>{!visibleTaxa.length && <EmptyState />}</div>
           </article>
         </section>
 

@@ -41,14 +41,14 @@ function TaxonATooltip({ active, payload, label }) {
   const point = entries[0].payload
   return <div className="chart-tooltip recurrence-tooltip"><b>{monthLabel(label)}</b>{entries.map((item) => {
     const control = point.controls[item.name]
-    return <div key={item.name}><i style={{ background: aColor(control.meanA), borderColor: CONTROL_TYPE_STROKES[item.name] || '#65756d' }} />{item.name}<span>{control.reads.toLocaleString()} reads · A {control.meanA === null ? '—' : control.meanA.toFixed(3)}</span></div>
+    return <div key={item.name}><i style={{ background: aColor(control.meanA), borderColor: CONTROL_TYPE_STROKES[item.name] || '#65756d' }} />{item.name}<span>{control.reads.toLocaleString()} reads · 5′ C→T {control.meanA === null ? '—' : control.meanA.toFixed(3)}</span></div>
   })}</div>
 }
 
 function PrevalenceTooltip({ active, payload }) {
   const point = payload?.[0]?.payload
   if (!active || !point) return null
-  return <div className="chart-tooltip landscape-tooltip"><b>{point.name}</b><small>{point.kingdom}</small><div>Prevalence<span>{point.prevalence.toFixed(1)}%</span></div><div>Mean relative abundance<span>{point.meanAbundance.toFixed(3)}%</span></div><div>Detected in<span>{point.detectedLibraries} of {point.eligibleLibraries} libraries</span></div><div>Total reads<span>{point.reads.toLocaleString()}</span></div><div>Mean A<span>{point.meanA === null ? '—' : point.meanA.toFixed(3)}</span></div><em>Click to open Taxon Explorer</em></div>
+  return <div className="chart-tooltip landscape-tooltip"><b>{point.name}</b><small>{point.kingdom}</small><div>Prevalence<span>{point.prevalence.toFixed(1)}%</span></div><div>Mean relative abundance<span>{point.meanAbundance.toFixed(3)}%</span></div><div>Detected in<span>{point.detectedLibraries} of {point.eligibleLibraries} libraries</span></div><div>Total reads<span>{point.reads.toLocaleString()}</span></div><div>Mean 5′ C→T<span>{point.meanA === null ? '—' : point.meanA.toFixed(3)}</span></div><em>Click to open Taxon Explorer</em></div>
 }
 
 export function PrevalenceExplorer({ rankFilter, records = [], minReads, onMinReadsChange, onOpenTaxon }) {
@@ -118,7 +118,7 @@ export function PrevalenceExplorer({ rankFilter, records = [], minReads, onMinRe
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum prevalence (%)</span><input type="number" min="0" max="100" step="1" value={minPrevalence} onChange={(event) => setMinPrevalence(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Eligible libraries', value: analysis.eligibleLibraries, detail: 'Prevalence denominator' },
@@ -254,7 +254,7 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
     </div>
     <PageGuide items={[
       { title: 'Search one taxon', text: 'Choose a name at any taxonomic rank to follow it across control libraries and months. Selecting a result automatically changes the rank filter when needed. The Wikipedia card is external background information, not part of your sequencing result.' },
-      { title: 'Compare the control types', text: 'Each month has separate bars for extraction negatives and library negatives. Bar height is assigned reads, while fill colour represents read-weighted A.' },
+      { title: 'Compare the control types', text: 'Each month has separate bars for extraction negatives and library negatives. Bar height is assigned reads, while fill colour represents read-weighted 5′ C→T.' },
       { title: 'Open the contributing libraries', text: 'Click a bar to show the libraries contributing to that month and control type. Then click a library to inspect its full Krona-style taxonomy.' },
     ]} />
     <article className="panel taxon-wiki-card">
@@ -269,22 +269,22 @@ export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonO
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Assigned reads', value: fmt(summary.reads), detail: taxon || 'No taxon selected' },
       { label: 'Libraries', value: summary.libraries.length, detail: 'Matching controls' },
       { label: 'Months detected', value: summary.timeline.length, detail: 'After filters' },
-      { label: 'Mean A', value: summary.meanA === null ? '—' : summary.meanA.toFixed(3), detail: 'Read-weighted' },
+      { label: 'Mean 5′ C→T', value: summary.meanA === null ? '—' : summary.meanA.toFixed(3), detail: 'Read-weighted' },
     ]} />
     <div className="analysis-grid">
       <article className="panel analysis-chart-panel">
-        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Click a bar to show its contributing libraries; height is reads and fill is mean A</p></div><div className="recurrence-legends"><div className="control-type-legend">{summary.controlTypes.map((type) => <span key={type}><i style={{ borderColor: CONTROL_TYPE_STROKES[type] || '#65756d' }} />{type}</span>)}</div><div className="a-legend"><span>Low A</span><i /><span>High A ≥ 0.30</span></div></div></div>
+        <div className="panel-head"><div><span className="kicker">RECURRENCE</span><h2>{taxon || 'Choose a taxon'}</h2><p>Click a bar to show its contributing libraries; height is reads and fill is mean 5′ C→T</p></div><div className="recurrence-legends"><div className="control-type-legend">{summary.controlTypes.map((type) => <span key={type}><i style={{ borderColor: CONTROL_TYPE_STROKES[type] || '#65756d' }} />{type}</span>)}</div><div className="a-legend"><span>Low 5′ C→T</span><i /><span>High 5′ C→T ≥ 0.30</span></div></div></div>
         {summary.timeline.length ? <div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.timeline} margin={{ top: 15, right: 18, left: -5, bottom: 2 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickFormatter={fmt} tickLine={false} axisLine={false} /><Tooltip content={<TaxonATooltip />} />{summary.controlTypes.map((type) => <Bar key={type} name={type} dataKey={(point) => point.controls[type]?.reads || 0} radius={[4, 4, 0, 0]} onClick={(_, index) => toggleOccurrence(summary.timeline[index]?.month, type)}>{summary.timeline.map((point) => { const active = selectedOccurrence?.month === point.month && selectedOccurrence?.controlType === type; return <Cell key={point.month} fill={aColor(point.controls[type]?.meanA)} stroke={active ? '#172f26' : CONTROL_TYPE_STROKES[type] || '#65756d'} strokeWidth={active ? 4 : 3} opacity={!selectedOccurrence || active ? 1 : .28} /> })}</Bar>)}</BarChart></ResponsiveContainer></div> : <div className="analysis-empty">No observations match these filters.</div>}
       </article>
       <article className="panel analysis-list-panel">
         <div className="panel-head"><div><span className="kicker">LIBRARIES</span><h2>{selectedOccurrence ? `${monthLabel(selectedOccurrence.month)} · ${selectedOccurrence.controlType}` : 'Where it appears'}</h2><p>{displayedLibraries.length} matching {displayedLibraries.length === 1 ? 'library' : 'libraries'}</p></div>{selectedOccurrence && <button className="secondary" onClick={() => setSelectedOccurrence(null)}>Show all</button>}</div>
-        <div className="analysis-list">{displayedLibraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b><i className="a-dot" style={{ background: aColor(item.aReads ? item.aSum / item.aReads : null) }} />{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `A ${(item.aSum / item.aReads).toFixed(3)}` : 'A —'}</small></strong><ArrowRight size={14} /></button>)}</div>
+        <div className="analysis-list">{displayedLibraries.slice(0, 50).map((item) => <button key={item.libraryId} onClick={() => onOpenLibrary(item.libraryId)}><span><b><i className="a-dot" style={{ background: aColor(item.aReads ? item.aSum / item.aReads : null) }} />{item.libraryId}{warningIds.has(item.libraryId) && <AlertTriangle size={11} />}</b><small>{item.month} · {item.controlType}</small></span><strong>{item.reads.toLocaleString()}<small>{item.aReads ? `5′ C→T ${(item.aSum / item.aReads).toFixed(3)}` : '5′ C→T —'}</small></strong><ArrowRight size={14} /></button>)}</div>
       </article>
     </div>
   </section>
@@ -370,7 +370,7 @@ export function LibraryComparison({ rankFilter, records = [], metadata = [], war
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: 'Bray–Curtis distance', value: distance.toFixed(3), detail: distance < .25 ? 'Similar profiles' : distance < .6 ? 'Moderately different' : 'Strongly different' },
@@ -379,7 +379,7 @@ export function LibraryComparison({ rankFilter, records = [], metadata = [], war
       { label: `Only ${right || 'B'}`, value: rightOnly, detail: 'Unique taxa' },
     ]} />
     {left === right ? <div className="panel analysis-empty tall">Choose two different libraries to compare.</div> : <article className="panel compare-panel">
-      <div className="compare-head"><button onClick={() => onOpenLibrary(left)}><b>{left}{warningIds.has(left) && <AlertTriangle size={12} />}</b><span>{leftInfo ? `${dateLabel(leftInfo.date || leftInfo.month)} · ${leftInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(leftSummary.reads)} reads · mean A {leftSummary.meanA?.toFixed(3) ?? '—'}</small></button><div><span>Relative abundance</span><small>Top {taxa.length} combined taxa</small></div><button onClick={() => onOpenLibrary(right)}><b>{right}{warningIds.has(right) && <AlertTriangle size={12} />}</b><span>{rightInfo ? `${dateLabel(rightInfo.date || rightInfo.month)} · ${rightInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(rightSummary.reads)} reads · mean A {rightSummary.meanA?.toFixed(3) ?? '—'}</small></button></div>
+      <div className="compare-head"><button onClick={() => onOpenLibrary(left)}><b>{left}{warningIds.has(left) && <AlertTriangle size={12} />}</b><span>{leftInfo ? `${dateLabel(leftInfo.date || leftInfo.month)} · ${leftInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(leftSummary.reads)} reads · mean 5′ C→T {leftSummary.meanA?.toFixed(3) ?? '—'}</small></button><div><span>Relative abundance</span><small>Top {taxa.length} combined taxa</small></div><button onClick={() => onOpenLibrary(right)}><b>{right}{warningIds.has(right) && <AlertTriangle size={12} />}</b><span>{rightInfo ? `${dateLabel(rightInfo.date || rightInfo.month)} · ${rightInfo.controlType}` : 'Date and type unavailable'}</span><small>{fmt(rightSummary.reads)} reads · mean 5′ C→T {rightSummary.meanA?.toFixed(3) ?? '—'}</small></button></div>
       <div className="compare-taxa">{taxa.map((item) => {
         const leftShare = leftSummary.reads ? item.leftReads / leftSummary.reads * 100 : 0
         const rightShare = rightSummary.reads ? item.rightReads / rightSummary.reads * 100 : 0
@@ -469,30 +469,30 @@ export function DamageExplorer({ rankFilter, records = [], minReads, onMinReadsC
   const weightedA = totalReads ? rows.reduce((sum, row) => sum + row.meanA * row.reads, 0) / totalReads : null
 
   return <section className="analysis-page">
-    <div className="explorer-hero"><div><span className="kicker">DAMAGE / A</span><h1>Damage overview</h1><p>A is the {A_DEFINITION}. Explore it across taxa, libraries, and time.</p></div></div>
+    <div className="explorer-hero"><div><span className="kicker">DAMAGE / C→T</span><h1>Damage overview</h1><p>The 5′ C→T damage value is the {A_DEFINITION}. Explore it across taxa, libraries, and time.</p></div></div>
     <PageGuide items={[
-      { title: 'What A means', text: `A is the ${A_DEFINITION}.` },
-      { title: 'Use the two plots', text: 'The distribution counts observations at different A values; the timeline shows the read-weighted mean A for each month. Click a bar or month to inspect its supporting taxa.' },
-      { title: 'Check supporting evidence', text: 'Use minimum reads and minimum A to reduce weak observations. The table shows which taxa support the highest remaining values.' },
+      { title: 'What 5′ C→T means', text: `The 5′ C→T damage value is the ${A_DEFINITION}.` },
+      { title: 'Use the two plots', text: 'The distribution counts observations at different 5′ C→T values; the timeline shows the read-weighted mean 5′ C→T for each month. Click a bar or month to inspect its supporting taxa.' },
+      { title: 'Check supporting evidence', text: 'Use minimum reads and minimum 5′ C→T to reduce weak observations. The table shows which taxa support the highest remaining values.' },
     ]} />
     <div className="panel explorer-filters damage-filters">
       {rankFilter}
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
-      { label: 'Mean A', value: weightedA === null ? '—' : weightedA.toFixed(3), detail: 'Read-weighted' },
+      { label: 'Mean 5′ C→T', value: weightedA === null ? '—' : weightedA.toFixed(3), detail: 'Read-weighted' },
       { label: 'Observations', value: rows.length, detail: 'Library-taxon rows' },
       { label: 'Taxa', value: analysis.taxaCount, detail: 'Top 50 shown' },
-      { label: 'Assigned reads', value: fmt(totalReads), detail: 'With A estimate' },
+      { label: 'Assigned reads', value: fmt(totalReads), detail: 'With 5′ C→T estimate' },
     ]} />
     <div className="damage-grid">
-      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Click a bar to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" radius={[4, 4, 0, 0]} onClick={(_, index) => setSelectedBinIndex((current) => current === index ? null : index)}>{analysis.bins.map((bin, index) => <Cell key={bin.label} fill={selectedBinIndex === index ? '#5145b8' : '#7b72df'} opacity={selectedBinIndex === null || selectedBinIndex === index ? 1 : .35} />)}</Bar></BarChart></ResponsiveContainer></div></article>
-      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Click a month to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }} onClick={(state) => state?.activeLabel && setSelectedMonth((current) => current === state.activeLabel ? '' : state.activeLabel)}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} />{selectedMonth && <ReferenceLine x={selectedMonth} stroke="#147454" strokeDasharray="4 3" />}<Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></article>
+      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>5′ C→T estimates</h2><p>Click a bar to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" radius={[4, 4, 0, 0]} onClick={(_, index) => setSelectedBinIndex((current) => current === index ? null : index)}>{analysis.bins.map((bin, index) => <Cell key={bin.label} fill={selectedBinIndex === index ? '#5145b8' : '#7b72df'} opacity={selectedBinIndex === null || selectedBinIndex === index ? 1 : .35} />)}</Bar></BarChart></ResponsiveContainer></div></article>
+      <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean 5′ C→T trend</h2><p>Click a month to filter the supporting taxa</p></div></div><div className="analysis-chart clickable-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }} onClick={(state) => state?.activeLabel && setSelectedMonth((current) => current === state.activeLabel ? '' : state.activeLabel)}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean 5′ C→T']} />{selectedMonth && <ReferenceLine x={selectedMonth} stroke="#147454" strokeDasharray="4 3" />}<Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 6 }} /></LineChart></ResponsiveContainer></div></article>
     </div>
-    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">SUPPORTING TAXA</span><h2>{selectedBin || selectedMonth ? 'Taxa for the chart selection' : 'Taxa ranked by mean A'}</h2><p>{selectedBin || selectedMonth ? `${selectedBin ? `A ${selectedBin.label}` : ''}${selectedBin && selectedMonth ? ' · ' : ''}${selectedMonth ? monthLabel(selectedMonth) : ''} · ${selectedRows.length} observations` : 'Click a column heading to sort; minimum read filter applies before aggregation'}</p></div>{(selectedBin || selectedMonth) && <button className="secondary" onClick={() => { setSelectedBinIndex(null); setSelectedMonth('') }}>Clear chart selection</button>}</div><div className="table-scroll"><table><thead><tr>{sortableHeader('name', 'Taxon')}{sortableHeader('kingdom', 'Biological group')}{sortableHeader('meanA', 'Mean A', A_DEFINITION)}{sortableHeader('reads', 'Reads')}{sortableHeader('libraries', 'Libraries')}</tr></thead><tbody>{sortedTaxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
+    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">SUPPORTING TAXA</span><h2>{selectedBin || selectedMonth ? 'Taxa for the chart selection' : 'Taxa ranked by mean 5′ C→T'}</h2><p>{selectedBin || selectedMonth ? `${selectedBin ? `5′ C→T ${selectedBin.label}` : ''}${selectedBin && selectedMonth ? ' · ' : ''}${selectedMonth ? monthLabel(selectedMonth) : ''} · ${selectedRows.length} observations` : 'Click a column heading to sort; minimum read filter applies before aggregation'}</p></div>{(selectedBin || selectedMonth) && <button className="secondary" onClick={() => { setSelectedBinIndex(null); setSelectedMonth('') }}>Clear chart selection</button>}</div><div className="table-scroll"><table><thead><tr>{sortableHeader('name', 'Taxon')}{sortableHeader('kingdom', 'Biological group')}{sortableHeader('meanA', 'Mean 5′ C→T', A_DEFINITION)}{sortableHeader('reads', 'Reads')}{sortableHeader('libraries', 'Libraries')}</tr></thead><tbody>{sortedTaxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
   </section>
 }
 
@@ -562,7 +562,7 @@ export function RunQcExplorer({ rankFilter, records = [], metadata = [], warning
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
     <MetricStrip items={[
       { label: groupLabels[groupField], value: groups.length, detail: 'Groups represented' },
@@ -685,7 +685,7 @@ export function CooccurrenceExplorer({ rankFilter, records = [], minReads, onMin
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
       <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum shared libraries</span><input type="number" min="1" max="50" value={minimumShared} onChange={(event) => setMinimumShared(event.target.value)} /></label>
       <label className="filter-field"><span>Most prevalent taxa</span><div className="select-wrap"><select value={maxTaxa} onChange={(event) => setMaxTaxa(event.target.value)}>{[20, 30, 40].map((value) => <option key={value} value={value}>Top {value}</option>)}</select><ChevronDown size={15} /></div></label>
     </div>
@@ -707,7 +707,7 @@ export function CooccurrenceExplorer({ rankFilter, records = [], minReads, onMin
             <circle r={node.radius} fill={COLORS[node.kingdom] || '#7b72df'} />
             {(index < 15 || node.degree >= 5) && <text y={node.radius + 12} textAnchor="middle">{node.name}</text>}
           </g>)}</g>
-        </svg>{hover && <div className="network-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.kingdom}</span><div><strong>{hover.node.libraries.size}</strong> libraries · <strong>{hover.node.reads.toLocaleString()}</strong> reads</div><small>{hover.node.aReads ? `Mean A ${(hover.node.aSum / hover.node.aReads).toFixed(3)}` : 'Mean A unavailable'} · {hover.node.degree} associations</small><em>Click to open Taxon Explorer</em></div>}</div>
+        </svg>{hover && <div className="network-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.kingdom}</span><div><strong>{hover.node.libraries.size}</strong> libraries · <strong>{hover.node.reads.toLocaleString()}</strong> reads</div><small>{hover.node.aReads ? `Mean 5′ C→T ${(hover.node.aSum / hover.node.aReads).toFixed(3)}` : 'Mean 5′ C→T unavailable'} · {hover.node.degree} associations</small><em>Click to open Taxon Explorer</em></div>}</div>
           : <div className="analysis-empty tall">No pairs meet the shared-library threshold. Lower the threshold or widen the filters.</div>}
       </article>
       <article className="panel network-pairs"><div className="panel-head"><div><span className="kicker">STRONGEST PAIRS</span><h2>Repeated associations</h2><p>Ranked by Jaccard similarity</p></div></div><div className="pair-list">{network.edges.slice(0, 30).map((edge) => <div key={edge.source + edge.target}><span><button className="taxon-link" onClick={() => onOpenTaxon(edge.source)}>{edge.source}</button><i>+</i><button className="taxon-link" onClick={() => onOpenTaxon(edge.target)}>{edge.target}</button></span><strong>{edge.jaccard.toFixed(2)}<small>{edge.shared} shared</small></strong></div>)}</div></article>

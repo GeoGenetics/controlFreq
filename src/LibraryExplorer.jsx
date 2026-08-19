@@ -85,9 +85,9 @@ function Sunburst({ tree, focusPath, onFocus, onOpenTaxon }) {
       <circle cx="260" cy="250" r="68" className="sunburst-core" />
       <text x="260" y="238" textAnchor="middle" className="sunburst-label">{focus.name}</text>
       <text x="260" y="260" textAnchor="middle" className="sunburst-value">{fmt(focus.reads)}</text>
-      <text x="260" y="278" textAnchor="middle" className="sunburst-detail">{meanA === null ? 'No A value' : `mean A ${meanA.toFixed(3)}`}</text>
+      <text x="260" y="278" textAnchor="middle" className="sunburst-detail">{meanA === null ? 'No 5′ C→T value' : `mean 5′ C→T ${meanA.toFixed(3)}`}</text>
     </svg>
-    {hover && <div className="sunburst-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.path.join(" › ")}</span><div><strong>{hover.node.reads.toLocaleString()}</strong> reads · <strong>{(hover.node.reads / focus.reads * 100).toFixed(1)}%</strong> of view</div>{hover.node.aReads > 0 && <small>Mean A {(hover.node.aSum / hover.node.aReads).toFixed(3)}</small>}<em>{hover.node.children.size ? 'Click to focus this branch' : 'Click to open Taxon Explorer'}</em></div>}
+    {hover && <div className="sunburst-tooltip" style={{ left: hover.x, top: hover.y }}><b>{hover.node.name}</b><span>{hover.node.path.join(" › ")}</span><div><strong>{hover.node.reads.toLocaleString()}</strong> reads · <strong>{(hover.node.reads / focus.reads * 100).toFixed(1)}%</strong> of view</div>{hover.node.aReads > 0 && <small>Mean 5′ C→T {(hover.node.aSum / hover.node.aReads).toFixed(3)}</small>}<em>{hover.node.children.size ? 'Click to focus this branch' : 'Click to open Taxon Explorer'}</em></div>}
     <p className="sunburst-hint">Select a branch to focus · select a terminal taxon to explore it · use the breadcrumb to move back</p>
   </div>
 }
@@ -179,7 +179,7 @@ export default function LibraryExplorer({ rankFilter, records = [], rank = 'genu
     <PageGuide items={[
       { title: 'Choose one library', text: 'Search for a library ID or arrive here by clicking a warning, chart drill-down, or PCoA point. Everything below then describes that single library.' },
       { title: 'Explore the rings', text: 'Larger Krona segments contain more assigned reads. Click an internal branch to zoom; click a terminal taxon to open Taxon Explorer. The hover message tells you which action applies.' },
-      { title: 'Filter or compare', text: 'Read and A filters hide taxon observations that do not meet the threshold. Add the library to slot A or B when you want a direct profile comparison.' },
+      { title: 'Filter or compare', text: 'Read and 5′ C→T filters hide taxon observations that do not meet the threshold. Add the library to slot A or B when you want a direct profile comparison.' },
     ]} />
 
     {!records.length ? <div className="panel explorer-empty"><Sparkles size={23} /><h2>Library taxonomy is not in this data file</h2><p>Rebuild dashboard-data.json with the updated builder to enable this view.</p></div>
@@ -218,7 +218,7 @@ export default function LibraryExplorer({ rankFilter, records = [], rank = 'genu
           <SelectFilter label="Pipeline" value={pipeline} options={pipelines} onChange={setPipeline} />
           <SelectFilter label="Biological group" value={kingdom} options={kingdoms} onChange={setKingdom} />
           <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
-          <label className="filter-field"><span>Minimum A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
+          <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
         </div>
 
         <div className="explorer-grid">
@@ -235,14 +235,14 @@ export default function LibraryExplorer({ rankFilter, records = [], rank = 'genu
             <div className="panel-head"><div><span className="kicker">CURRENT LEVEL</span><h2>{focused.name}</h2><p>{topTaxa.length} branches shown, ranked by reads</p></div></div>
             <div className="lineage-list">{topTaxa.map((item, index) => <button key={item.path.join('>')} onClick={() => item.children.size ? setFocusPath(item.path) : onOpenTaxon(item.name)}>
               <span className="lineage-rank">{String(index + 1).padStart(2, '0')}</span>
-              <span><b>{item.name}</b><small>{item.aReads ? `mean A ${(item.aSum / item.aReads).toFixed(3)}` : 'A unavailable'}</small></span>
+              <span><b>{item.name}</b><small>{item.aReads ? `mean 5′ C→T ${(item.aSum / item.aReads).toFixed(3)}` : '5′ C→T unavailable'}</small></span>
               <strong>{item.reads.toLocaleString()}<small>reads</small></strong>
             </button>)}</div>
           </article>
         </div>
 
         <article className="panel similar-libraries-panel">
-          <div className="panel-head"><div><span className="kicker">NEAREST PROFILES</span><h2>Similar libraries</h2><p>Bray–Curtis similarity after the active pipeline, biological-group, read, and A filters</p></div><span className="similarity-count">{similarLibraries.length}</span></div>
+          <div className="panel-head"><div><span className="kicker">NEAREST PROFILES</span><h2>Similar libraries</h2><p>Bray–Curtis similarity after the active pipeline, biological-group, read, and C→T filters</p></div><span className="similarity-count">{similarLibraries.length}</span></div>
           <div className="similarity-list">{similarLibraries.map((item) => <div key={item.libraryId}>
             <div className="similarity-score"><b>{item.similarity.toFixed(1)}%</b><small>similar</small><i><span style={{ width: `${item.similarity}%` }} /></i></div>
             <div className="similarity-details">

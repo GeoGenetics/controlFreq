@@ -147,7 +147,7 @@ export default function PcoaExplorer({ rankFilter, records = [], rank = 'genus',
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum library total</span><input type="number" min="0" step="100" value={minimumLibraryReads} onChange={(event) => setMinimumLibraryReads(event.target.value)} /></label>
-      <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
+      <label className="filter-field"><span>Minimum 5′ C→T</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
 
     <article className="panel pcoa-panel">
