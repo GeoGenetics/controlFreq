@@ -10,7 +10,7 @@ import {
 import PageGuide from './PageGuide.jsx'
 
 const COLORS = {
-  Microbe: '#24c18a', Plant: '#9ad55c', Animal: '#f2b84b',
+  Bacteria: '#24c18a', Microbe: '#24c18a', Archaea: '#38a7c7', Plant: '#9ad55c', Animal: '#f2b84b',
   'Other Eukaryote': '#b08cff',
 }
 const CONTROL_TYPE_STROKES = {
@@ -113,7 +113,7 @@ export function PrevalenceExplorer({ records = [], minReads, onMinReadsChange, o
     <div className="panel explorer-filters landscape-filters">
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum prevalence (%)</span><input type="number" min="0" max="100" step="1" value={minPrevalence} onChange={(event) => setMinPrevalence(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
@@ -234,7 +234,7 @@ export function TaxonExplorer({ records = [], warnings = [], selectedTaxon = "",
     </article>
     <div className="panel explorer-filters analysis-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
     </div>
@@ -334,7 +334,7 @@ export function LibraryComparison({ records = [], metadata = [], warnings = [], 
       <span className="compare-vs"><GitCompareArrows size={18} />VS</span>
       <label className="filter-field"><span>Library B</span><div className="select-wrap"><select value={right} onChange={(event) => onComparisonChange([left, event.target.value].filter((id, index, list) => id && list.indexOf(id) === index))}>{libraryIds.map((id) => <option key={id}>{id}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
@@ -402,7 +402,7 @@ export function DamageExplorer({ records = [], minReads, onMinReadsChange, onOpe
     ]} />
     <div className="panel explorer-filters damage-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
@@ -416,7 +416,7 @@ export function DamageExplorer({ records = [], minReads, onMinReadsChange, onOpe
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">DISTRIBUTION</span><h2>A estimates</h2><p>Count of library-taxon observations</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={analysis.bins} margin={{ top: 15, right: 15, bottom: 18, left: -12 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="label" angle={-30} textAnchor="end" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} /><Tooltip /><Bar dataKey="observations" name="Observations" fill="#7b72df" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div></article>
       <article className="panel analysis-chart-panel"><div className="panel-head"><div><span className="kicker">OVER TIME</span><h2>Mean A trend</h2><p>Read-weighted by month</p></div></div><div className="analysis-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={analysis.timeline} margin={{ top: 15, right: 18, bottom: 2, left: -5 }}><CartesianGrid stroke="#e8ece9" vertical={false} /><XAxis dataKey="month" tickFormatter={monthLabel} tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} domain={['auto', 'auto']} /><Tooltip labelFormatter={monthLabel} formatter={(value) => [value.toFixed(3), 'Mean A']} /><Line dataKey="meanA" stroke="#20a97b" strokeWidth={2} dot={{ r: 3 }} /></LineChart></ResponsiveContainer></div></article>
     </div>
-    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">HIGHEST DAMAGE</span><h2>Taxa ranked by mean A</h2><p>Minimum read filter applies before aggregation</p></div></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Kingdom</th><th>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{analysis.taxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
+    <article className="panel damage-table"><div className="panel-head"><div><span className="kicker">HIGHEST DAMAGE</span><h2>Taxa ranked by mean A</h2><p>Minimum read filter applies before aggregation</p></div></div><div className="table-scroll"><table><thead><tr><th>Taxon</th><th>Biological group</th><th>Mean A</th><th>Reads</th><th>Libraries</th></tr></thead><tbody>{analysis.taxa.map((item) => <tr key={item.name}><td><button className="taxon-link" onClick={() => onOpenTaxon(item.name)}>{item.name}</button></td><td><span className="tag"><i style={{ background: COLORS[item.kingdom] }} />{item.kingdom}</span></td><td><strong>{item.meanA.toFixed(3)}</strong></td><td>{item.reads.toLocaleString()}</td><td>{item.libraries.size}</td></tr>)}</tbody></table></div></article>
   </section>
 }
 
@@ -483,7 +483,7 @@ export function RunQcExplorer({ records = [], metadata = [], warnings = [], minR
     <div className="panel explorer-filters run-filters">
       <label className="filter-field"><span>Group by</span><div className="select-wrap"><select value={groupField} onChange={(event) => { setGroupField(event.target.value); setSelectedGroup('') }}>{Object.entries(groupLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><ChevronDown size={15} /></div></label>
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
     </div>
@@ -605,7 +605,7 @@ export function CooccurrenceExplorer({ records = [], minReads, onMinReadsChange,
     ]} />
     <div className="panel explorer-filters network-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum mean A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minimumA} onChange={(event) => setMinimumA(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum shared libraries</span><input type="number" min="1" max="50" value={minimumShared} onChange={(event) => setMinimumShared(event.target.value)} /></label>

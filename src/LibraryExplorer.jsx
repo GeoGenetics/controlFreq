@@ -92,7 +92,7 @@ function Sunburst({ tree, focusPath, onFocus, onOpenTaxon }) {
   </div>
 }
 
-export default function LibraryExplorer({ records = [], warnings = [], warningMethod, selectedLibrary, minReads, onMinReadsChange, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
+export default function LibraryExplorer({ records = [], rank = 'genus', warnings = [], warningMethod, selectedLibrary, minReads, onMinReadsChange, onSelectLibrary, comparisonLibraries = [], onAddToComparison, onRemoveFromComparison, onOpenComparison, onCompareWith, onOpenTaxon }) {
   const [libraryQuery, setLibraryQuery] = useState(selectedLibrary || '')
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -169,7 +169,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
 
   return <section className="library-explorer">
     <div className="explorer-hero">
-      <div><span className="kicker">LIBRARY EXPLORER</span><h1>Taxonomic overview</h1><p>Inspect a control library from kingdom down to genus.</p></div>
+      <div><span className="kicker">LIBRARY EXPLORER</span><h1>Taxonomic overview</h1><p>Inspect a control library using {rank}-level assignments and their lineage.</p></div>
       <div className="library-search">
         <label htmlFor="library-id"><Search size={17} /><input id="library-id" value={libraryQuery} onChange={(event) => chooseLibrary(event.target.value)} placeholder="Search library ID…" autoComplete="off" /></label>
         {matches.length > 0 && <div className="library-results">{matches.map((id) => <button key={id} onClick={() => chooseLibrary(id)}>{id}</button>)}</div>}
@@ -206,16 +206,16 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
             <span className="warning-guide-icon">{libraryWarnings.length ? <AlertTriangle size={18} /> : <Sparkles size={18} />}</span>
             <div><span className="kicker">HOW WARNINGS WORK</span><h2>{libraryWarnings.length ? `Flagged in ${libraryWarnings.length} comparison ${libraryWarnings.length === 1 ? "group" : "groups"}` : "No warning for this library"}</h2><p>A warning is a statistical review flag, not a pipeline failure or proof of a contamination source.</p></div>
           </div>
-          <div className="warning-guide-method"><b>Trigger</b><span>{warningMethod || "Above median + 3 scaled MAD among comparable libraries (minimum 4 libraries)."}</span><small>Libraries are compared only within the same control type, kingdom, and pipeline.</small></div>
+          <div className="warning-guide-method"><b>Trigger</b><span>{warningMethod || "Above median + 3 scaled MAD among comparable libraries (minimum 4 libraries)."}</span><small>Libraries are compared only within the same control type, biological group, and pipeline.</small></div>
           {libraryWarnings.length > 0 ? <div className="library-warning-details">{libraryWarnings.map((item) => <div key={[item.month, item.kingdom, item.pipeline].join("-")}>
-            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: <button className="taxon-link compact" onClick={() => onOpenTaxon(item.topTaxon)}>{item.topTaxon || "Unknown"}</button></em></span>
+            <span><b>{item.kingdom}</b><small>{item.pipeline} · {item.controlType}</small><em>Leading taxon: <button className="taxon-link compact" onClick={() => onOpenTaxon(item.topTaxon, 'genus')}>{item.topTaxon || "Unknown"}</button></em></span>
             <span><strong>{item.reads.toLocaleString()} reads</strong><small>Baseline median {item.baseline.toLocaleString()} · threshold {item.threshold.toLocaleString()}</small><em>{item.fold ? item.fold + "× the median" : "Baseline median is zero"}</em></span>
           </div>)}</div> : <div className="library-warning-clear"><span />This library does not exceed the robust baseline in any comparison group.</div>}
         </article>
 
         <div className="panel explorer-filters">
           <SelectFilter label="Pipeline" value={pipeline} options={pipelines} onChange={setPipeline} />
-          <SelectFilter label="Kingdom" value={kingdom} options={kingdoms} onChange={setKingdom} />
+          <SelectFilter label="Biological group" value={kingdom} options={kingdoms} onChange={setKingdom} />
           <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" placeholder="No minimum" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
           <label className="filter-field"><span>Minimum A</span><input type="number" min="0" step="0.01" placeholder="No minimum" value={minA} onChange={(event) => setMinA(event.target.value)} /></label>
         </div>
@@ -241,7 +241,7 @@ export default function LibraryExplorer({ records = [], warnings = [], warningMe
         </div>
 
         <article className="panel similar-libraries-panel">
-          <div className="panel-head"><div><span className="kicker">NEAREST PROFILES</span><h2>Similar libraries</h2><p>Bray–Curtis similarity after the active pipeline, kingdom, read, and A filters</p></div><span className="similarity-count">{similarLibraries.length}</span></div>
+          <div className="panel-head"><div><span className="kicker">NEAREST PROFILES</span><h2>Similar libraries</h2><p>Bray–Curtis similarity after the active pipeline, biological-group, read, and A filters</p></div><span className="similarity-count">{similarLibraries.length}</span></div>
           <div className="similarity-list">{similarLibraries.map((item) => <div key={item.libraryId}>
             <div className="similarity-score"><b>{item.similarity.toFixed(1)}%</b><small>similar</small><i><span style={{ width: `${item.similarity}%` }} /></i></div>
             <div className="similarity-details">

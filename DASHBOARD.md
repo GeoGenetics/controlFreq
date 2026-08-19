@@ -1,6 +1,6 @@
 # React dashboard
 
-The dashboard is a Vite/React application that reads a compact summary of a controlFreq TSV. It includes filters for control type, kingdom, pipeline, and date range, plus taxa search and CSV export.
+The dashboard is a Vite/React application that reads a compact summary of a controlFreq TSV. It includes filters for control type, biological group, pipeline, and date range, plus taxa search and CSV export.
 
 ## Dashboard features
 
@@ -11,11 +11,14 @@ drill-down. Every main tab includes an open-by-default,
 plain-language guide explaining what the page compares, how to read its
 visuals, and where clicks lead; the guide can be collapsed at any time.
 
-The generated JSON retains monthly summaries by taxon, control type, kingdom,
-and pipeline, plus compact per-library genus lineages and run metadata. The
-dashboard filters these summaries by taxon, assigned reads, mean A, control,
-kingdom, pipeline, and date. Minimum nreads defaults to 50 and is synchronized
-across every relevant tab while the dashboard is open.
+The generated JSON retains monthly summaries by taxon, control type, biological group,
+pipeline, and standard taxonomic rank, plus compact per-library lineages and run
+metadata. PREFILTER assignments are split into distinct Bacteria and Archaea
+biological groups. Genus data ships in the initial payload; other ranks are
+split into smaller files and loaded only when selected. A global rank selector
+is shared by the analysis tabs and defaults to genus. The dashboard filters these summaries by taxon, assigned reads, mean A,
+control, biological group, pipeline, and date. Minimum nreads defaults to 50 and is
+synchronized across every relevant tab while the dashboard is open.
 
 Monthly read-volume points open library drill-downs. Peak libraries is the
 largest library count contributing to any one visible taxon/month summary;
@@ -39,7 +42,7 @@ Krona branches zoom the hierarchy, while terminal taxa open Taxon Explorer.
 A Similar Libraries section ranks the eight nearest filtered profiles using
 100 × (1 − Bray–Curtis distance), with date, control type, shared taxa, warning
 status, and direct open/compare actions. The PCoA tab
-uses Bray-Curtis distances of relative genus abundance. Dedicated tabs provide
+uses Bray-Curtis distances of relative abundance at the selected rank. Dedicated tabs provide
 taxon recurrence, library comparison with exact control dates and types,
 damage/A distributions, run/batch QC, and
 a co-occurrence network based on library co-presence and Jaccard similarity.
@@ -60,7 +63,7 @@ links library IDs to Library Explorer and leading taxa to Taxon Explorer. A
 monthly grouped bar chart compares warning frequency between extraction and
 library negatives. Warnings use total genus-level reads and flag values above
 the median plus three scaled median absolute deviations
-within each control type, kingdom, and pipeline group. At least four libraries
+within each control type, biological group, and pipeline group. At least four libraries
 are required to establish a baseline, and warnings default to newest-first in a
 scrolling table. The Overview contaminant table supports sorting by every
 column; its trend is the percent read-count change from the previous to the
@@ -93,7 +96,7 @@ To rebuild only the dashboard data from an existing control table, run:
 python3 scripts/build_dashboard_data.py controls/control_20260619_105413.tsv
 ```
 
-This streams the large TSV and writes `public/dashboard-data.json`. Replace the input path with any newer control table. The builder retains every genus-level negative-control observation with a numeric read count; it does not apply a minimum-read cutoff. Dashboard and CSV-export filters are applied interactively.
+This streams the large TSV and writes `public/dashboard-data.json`. Replace the input path with any newer control table. The builder retains negative-control observations with numeric read counts at phylum, class, order, family, genus, and species level; it does not apply a minimum-read cutoff. Dashboard and CSV-export filters are applied interactively. Warning baselines remain genus-based so changing the analysis rank does not redefine alerts.
 
 ## Run locally
 

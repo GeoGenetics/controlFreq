@@ -13,6 +13,7 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-is": "latest",
     "recharts": "latest",
     "lucide-react": "latest"
   },

@@ -119,7 +119,7 @@ install.packages(c(
 The generated report includes sections such as:
 
 * Total contamination over time
-* Kingdom-level contamination composition
+* Biological-group contamination composition
 * Plant contaminants
 * Animal contaminants
 * Other eukaryotic contaminants

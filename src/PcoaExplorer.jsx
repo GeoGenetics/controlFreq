@@ -103,7 +103,7 @@ function PcoaTooltip({ active, payload }) {
   return <div className="pcoa-tooltip"><b>{point.libraryId}</b><span>{point.controlType} · {point.month}</span><span>{point.pipeline}</span><strong>{point.reads.toLocaleString()} reads</strong>{point.warning && <em><AlertTriangle size={11} />Flagged library</em>}</div>
 }
 
-export default function PcoaExplorer({ records = [], warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
+export default function PcoaExplorer({ records = [], rank = 'genus', warnings = [], minReads, onMinReadsChange, onOpenLibrary }) {
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
   const [controlType, setControlType] = useState('All')
@@ -130,7 +130,7 @@ export default function PcoaExplorer({ records = [], warnings = [], minReads, on
 
   return <section className="pcoa-page">
     <div className="explorer-hero">
-      <div><span className="kicker">LIBRARY SIMILARITY</span><h1>PCoA ordination</h1><p>Bray–Curtis distances calculated from relative genus abundance.</p></div>
+      <div><span className="kicker">LIBRARY SIMILARITY</span><h1>PCoA ordination</h1><p>Bray–Curtis distances calculated from relative {rank} abundance.</p></div>
       <div className="pcoa-key">{controlTypes.map((item) => <span key={item}><i style={{ background: colorFor(item) }} />{item}</span>)}<span><i className="warning-ring" />Warning</span></div>
     </div>
 
@@ -142,7 +142,7 @@ export default function PcoaExplorer({ records = [], warnings = [], minReads, on
 
     <div className="panel explorer-filters pcoa-filters">
       <FilterSelect label="Pipeline" value={pipeline} options={dimensions.pipelines} onChange={setPipeline} />
-      <FilterSelect label="Kingdom" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
+      <FilterSelect label="Biological group" value={kingdom} options={dimensions.kingdoms} onChange={setKingdom} />
       <FilterSelect label="Control type" value={controlType} options={dimensions.controlTypes} onChange={setControlType} />
       <label className="filter-field"><span>Minimum nreads</span><input type="number" min="0" step="50" value={minReads} onChange={(event) => onMinReadsChange(event.target.value)} /></label>
       <label className="filter-field"><span>Minimum library total</span><input type="number" min="0" step="100" value={minimumLibraryReads} onChange={(event) => setMinimumLibraryReads(event.target.value)} /></label>
