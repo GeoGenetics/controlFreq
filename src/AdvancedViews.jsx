@@ -133,7 +133,7 @@ export function PrevalenceExplorer({ rankFilter, records = [], minReads, onMinRe
     <p className="analysis-method-note">The vertical guide marks 50% prevalence; the horizontal guide is the median abundance among visible taxa. Relative abundance is calculated against all assigned taxon reads in each eligible library. Click any point to inspect that taxon.</p>
   </section>
 }
-export function TaxonExplorer({ rankFilter, records = [], warnings = [], selectedTaxon = "", minReads, onMinReadsChange, onSelectTaxon, onOpenLibrary }) {
+export function TaxonExplorer({ rankFilter, records = [], rank = 'genus', taxonOptions = [], warnings = [], selectedTaxon = "", minReads, onMinReadsChange, onSelectTaxon, onOpenLibrary }) {
   const taxon = selectedTaxon
   const [pipeline, setPipeline] = useState('All')
   const [kingdom, setKingdom] = useState('All')
@@ -145,6 +145,24 @@ export function TaxonExplorer({ rankFilter, records = [], warnings = [], selecte
     kingdoms: [...new Set(records.map((row) => row.kingdom))].sort(),
     taxa: [...new Set(records.map((row) => row.name))].sort((a, b) => a.localeCompare(b)),
   }), [records])
+  const taxonSuggestions = useMemo(() => {
+    const options = taxonOptions.length ? taxonOptions : dimensions.taxa.map((name) => ({ rank, name }))
+    const query = taxon.trim().toLowerCase()
+    if (!query) return options.filter((item) => item.rank === rank).slice(0, 100)
+    return options.filter((item) => !query || item.name.toLowerCase().includes(query)).sort((left, right) => {
+      const leftStarts = query && left.name.toLowerCase().startsWith(query) ? 0 : 1
+      const rightStarts = query && right.name.toLowerCase().startsWith(query) ? 0 : 1
+      return leftStarts - rightStarts
+        || (left.rank === rank ? -1 : right.rank === rank ? 1 : 0)
+        || left.name.localeCompare(right.name)
+    }).slice(0, 100)
+  }, [taxonOptions, dimensions.taxa, taxon, rank])
+  const selectTaxon = (name) => {
+    const exact = taxonOptions.find((item) => item.name === name && item.rank === rank)
+      || taxonOptions.find((item) => item.name === name)
+    onSelectTaxon(name, exact?.rank)
+  }
+
 
   useEffect(() => {
     if (!taxon) { setWiki({ status: 'idle' }); return undefined }
@@ -220,10 +238,10 @@ export function TaxonExplorer({ rankFilter, records = [], warnings = [], selecte
   return <section className="analysis-page">
     <div className="explorer-hero">
       <div><span className="kicker">TAXON EXPLORER</span><h1>Taxon recurrence</h1><p>Follow one taxon across libraries, controls, and time.</p></div>
-      <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => onSelectTaxon(event.target.value)} placeholder="Search taxon…" /><datalist id="taxon-explorer-options">{dimensions.taxa.map((name) => <option key={name} value={name} />)}</datalist></label>
+      <label className="analysis-search"><Search size={17} /><input list="taxon-explorer-options" value={taxon} onChange={(event) => selectTaxon(event.target.value)} placeholder="Search any taxonomic rank…" /><datalist id="taxon-explorer-options">{taxonSuggestions.map((item) => <option key={`${item.rank}-${item.name}`} value={item.name}>{item.rank[0].toUpperCase() + item.rank.slice(1)}</option>)}</datalist></label>
     </div>
     <PageGuide items={[
-      { title: 'Search one taxon', text: 'Choose a name to follow it across control libraries and months. The Wikipedia card is external background information, not part of your sequencing result.' },
+      { title: 'Search one taxon', text: 'Choose a name at any taxonomic rank to follow it across control libraries and months. Selecting a result automatically changes the rank filter when needed. The Wikipedia card is external background information, not part of your sequencing result.' },
       { title: 'Compare the control types', text: 'Each month has separate bars for extraction negatives and library negatives. Bar height is assigned reads, while fill colour represents read-weighted A.' },
       { title: 'Open the contributing libraries', text: 'The list on the right shows where the taxon was detected. Click a library to inspect its full Krona-style taxonomy.' },
     ]} />

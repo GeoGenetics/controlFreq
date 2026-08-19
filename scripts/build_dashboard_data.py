@@ -280,6 +280,15 @@ def main():
         if len(taxa) == 30:
             break
 
+    rank_position = {rank: index for index, rank in enumerate(TAXONOMIC_RANKS)}
+    taxon_index = [
+        {"rank": rank, "name": name}
+        for rank, name in sorted(
+            {(rank, name) for rank, name, _ in taxa_reads},
+            key=lambda item: (rank_position[item[0]], item[1].casefold(), item[1]),
+        )
+    ]
+
     args.output.parent.mkdir(parents=True, exist_ok=True)
     rank_files = {}
     for selected_rank in TAXONOMIC_RANKS:
@@ -315,6 +324,7 @@ def main():
         "source": args.input.name,
         "ranks": list(TAXONOMIC_RANKS),
         "rankFiles": rank_files,
+        "taxonIndex": taxon_index,
         "records": records,
         "taxa": taxa,
         "taxonRecords": [
