@@ -72,35 +72,11 @@ Minimum mean A filtering is available on
 all analysis tabs where taxon-level A values can meaningfully restrict results.
 
 
-## Refresh the data
+## Refresh and run locally
 
-The main pipeline refreshes the dashboard data automatically after generating
-the latest control table:
+See [README.md](README.md#refresh-data) for the full maintenance workflow, including `bash scripts/main.sh --push`, validation, and deployment. The pipeline builds all 11 `public/dashboard-data*.json` files; each selected rank loads its own taxa and library files.
 
-```bash
-bash scripts/main.sh
-```
-
-To also commit the generated JSON and push it to the current branch on GitHub:
-
-```bash
-bash scripts/main.sh --push
-```
-
-The commit contains only `public/dashboard-data.json`. Git authentication must
-already be configured for the `origin` remote.
-
-To rebuild only the dashboard data from an existing control table, run:
-
-```bash
-python3 scripts/build_dashboard_data.py controls/control_20260619_105413.tsv
-```
-
-This streams the large TSV and writes `public/dashboard-data.json`. Replace the input path with any newer control table. The builder retains negative-control observations with numeric read counts at phylum, class, order, family, genus, and species level; it does not apply a minimum-read cutoff. Dashboard and CSV-export filters are applied interactively. Warning baselines remain genus-based so changing the analysis rank does not redefine alerts.
-
-## Run locally
-
-Node.js 20 or newer is recommended.
+For local dashboard development:
 
 ```bash
 npm install

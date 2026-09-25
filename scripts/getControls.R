@@ -4,7 +4,6 @@ library(stringr)
 library(readr)
 library(dplyr)
 library(purrr)
-library(ggplot2)
 
 args <- commandArgs(trailingOnly = TRUE)
 
@@ -70,10 +69,6 @@ controls <- smdb %>%
   ) %>% select(library_id, control_id, control_type, control_date)
 
 controls <- controls %>% filter(!is.na(library_id)) %>% distinct()
-
-#name_controls <- paste0("smdb/control_", datetime, ".tsv")
-#write_tsv(controls, name_controls)
-
 
 # ----- Find library results paths for controls -----
 
@@ -192,16 +187,3 @@ df_final <- df_final %>% select(-nalign) %>%
   )
 
 write_tsv(df_final, name)
-
-
-rmarkdown::render(
-  "scripts/controlFreq.Rmd",
-  params = list(
-    input_file = name,
-    datetime = datetime
-  ),
-  output_file = paste0("controlFreq_", datetime, ".html"),
-  output_dir = "reports",
-  knit_root_dir = getwd(),
-  envir = new.env()
-)
