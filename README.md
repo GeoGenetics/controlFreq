@@ -2,6 +2,24 @@
 
 A Vite/React dashboard for tracking taxonomic assignments in laboratory negative controls. The dashboard is deployed to GitHub Pages from the `main` branch. [DASHBOARD.md](DASHBOARD.md) describes its views and filters.
 
+## How controls are found
+
+`scripts/main.sh` downloads the merged SMDB table from the internal SMDB service. `scripts/getControls.R` reads that table and identifies controls using `robot_sample_id` and `archive_sample_id`. It uses the robot ID when present, otherwise the archive ID, as `control_id`. The matching is case-insensitive:
+
+| ID pattern | Stored `control_type` |
+| --- | --- |
+| `robot_sample_id` starts with `ExrNTC` | `Extraction_Negative` |
+| `robot_sample_id` starts with `ExrPTC` | `Extraction_Positive` |
+| `robot_sample_id` starts with `LibNTC` | `Library_Negative` |
+| `robot_sample_id` starts with `LibPTC` | `Library_Positive` |
+| Otherwise, `control_id` contains `SmplNTC` | `Sample_Negative` |
+
+Rows without a match or a `library_id` are discarded. The prefix checks take priority over `SmplNTC`. For Exr/Lib IDs, the eight digits after the prefix are interpreted as `YYMMDDNN`: the first six give the control date and the last two identify the control on that day. If the ID does not yield a date, including for `SmplNTC`, the script uses `robot_sample_sampling_date`. It keeps distinct combinations of library ID, control ID, type, and date.
+
+To locate the sequencing results, `getControls.R` passes those library IDs to `scripts/findLibrary.sh`. That helper loads Miller, selects the last filename matching each of `/datasets/caeg_production/_STATS/20*.fastq.tsv` and `20*.prod.tsv`, joins the catalogs on `library`, `date`, and `flowcell`, then selects the requested libraries. The control rows are joined to those catalog results by library ID; entries with `results_wf` equal to `ARCHIVE` are excluded. A library can have more than one matched run, so it can produce multiple result rows.
+
+For each remaining result path, the extractor looks for `results/metadmg/aggregate/Lib_<library_id>_collapsed.stat.gz` and `results/prefilter_metadmg/aggregate/Lib_<library_id>_collapsed.stat.gz`. Existing files contribute taxonomic rows labeled `EUKARYOTE` or `PREFILTER`. Controls without a matching statistics file remain in the control TSV with no read count. `scripts/build_dashboard_data.py` then includes only negative controls with a non-missing control date, numeric read count, and a supported taxonomic rank; PREFILTER rows also need a Bacteria or Archaea lineage. If an expected control is absent, check its SMDB IDs and `library_id`, run `bash scripts/findLibrary.sh LIBRARY_ID` to inspect the catalog match, and check the expected statistics paths. If control IDs or production catalog paths change, update `getControls.R` or `findLibrary.sh` accordingly.
+
 ## Refresh data
 
 Run these commands from the repository root on a machine with access to the internal SMDB endpoint and the CAEG production results directories. On the CAEG HPC, load the R environment first:
