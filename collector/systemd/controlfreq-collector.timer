@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh ControlFreq daily on Dandy
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Europe/Copenhagen
+RandomizedDelaySec=10min
+Persistent=true
+Unit=controlfreq-collector.service
+
+[Install]
+WantedBy=timers.target

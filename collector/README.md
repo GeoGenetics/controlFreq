@@ -15,7 +15,7 @@ bash collector/scripts/main.sh
 bash collector/scripts/main.sh --output-dir /path/to/controlfreq-data
 ```
 
-Requirements: `curl`, `unzip`, Python 3.8+, R with `tidyr`, `lubridate`,
+Requirements: `curl`, `unzip`, `flock`, Python 3.8+, R with `tidyr`, `lubridate`,
 `stringr`, `readr`, `dplyr`, and `purrr`, and the `miller/6.16.0` module.
 The entry point works from any directory. Relative output paths are resolved
 against the caller's directory. Raw SMDB TSVs, control TSVs, and temporary files
@@ -47,6 +47,72 @@ python3 collector/scripts/build_dashboard_data.py /path/to/control.tsv \
 Its default is now `collector/output/dashboard-data.json`; use the publisher
 when feeding a running webserver. The former `--push` option is removed: data
 updates no longer create Git commits or trigger website builds.
+
+## Run automatically with systemd on Dandy
+
+The development worktree is installed as a user service on
+`dandycomp07fl.unicph.domain`, running as `dlm551`. The timer runs daily at
+03:00 Europe/Copenhagen, with up to ten minutes of randomized delay. Missed
+runs are caught up when the timer next starts. User lingering is enabled on
+this host so the timer continues after logout.
+
+The units are in `collector/systemd/`. The installed copies are under
+`~/.config/systemd/user/`; `~/.config/controlfreq/collector.env` selects the
+repository and output directory. It currently points to this development
+worktree and its `collector/output/`. Keep that worktree in place while the
+timer uses it. Data publication remains separate from transfer to a webserver.
+
+```bash
+# Check schedule and last/current refresh:
+systemctl --user list-timers controlfreq-collector.timer
+systemctl --user status controlfreq-collector.service
+
+# Refresh now (waits for completion; use --no-block to return immediately):
+systemctl --user start controlfreq-collector.service
+
+# Logs are also copied here because journal access is restricted on Dandy:
+tail -f collector/logs/collector.log
+# Where journal access is permitted:
+journalctl --user -u controlfreq-collector.service -n 100
+
+# Stop future scheduled refreshes (a running refresh is left to finish):
+systemctl --user disable --now controlfreq-collector.timer
+```
+
+The service explicitly initialises `/etc/profile.d/modules.sh`, then loads
+`gcc/11.2.0`, `R/4.3.3`, and `python/3.10.18`. It needs no interactive shell
+configuration. Check these dependencies without fetching production data:
+
+```bash
+bash collector/scripts/run-systemd.sh --check
+```
+
+A lock in `collector/tmpdir/collector.lock` prevents manual and scheduled runs
+of this collector from overlapping. The original `main` checkout remains
+independent. A refresh may run for up to 12 hours; failures are recorded in the
+service status and leave the previously published JSON active. Local logs are
+appended to `collector/logs/collector.log`, which is ignored by Git.
+
+To install on another intended collector host, first adjust the absolute paths
+in the environment example, then run from the repository root:
+
+```bash
+mkdir -p ~/.config/systemd/user ~/.config/controlfreq
+cp collector/systemd/controlfreq-collector.{service,timer} ~/.config/systemd/user/
+cp collector/systemd/collector.env.example ~/.config/controlfreq/collector.env
+chmod 600 ~/.config/controlfreq/collector.env
+loginctl enable-linger "$USER"
+systemctl --user daemon-reload
+systemctl --user enable --now controlfreq-collector.timer
+systemctl --user start --no-block controlfreq-collector.service
+```
+
+Use `systemctl --user edit controlfreq-collector.timer` to change the schedule.
+For example, `[Timer]` with an empty `OnCalendar=` followed by
+`OnCalendar=*-*-* 06:00:00 Europe/Copenhagen` replaces the default calendar.
+Run `systemctl --user daemon-reload` and
+`systemctl --user restart controlfreq-collector.timer` after editing. Recopy
+repository unit files and reload systemd when updating the installed units.
 
 ## Transfer to the webserver
 

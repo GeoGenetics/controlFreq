@@ -13,3 +13,4 @@ collector/controls/
 collector/output/
 .env
 __pycache__/
+collector/logs/

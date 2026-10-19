@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh ControlFreq production data and publish dashboard JSON
+
+[Service]
+Type=oneshot
+EnvironmentFile=%h/.config/controlfreq/collector.env
+ExecStart=/bin/bash ${CONTROLFREQ_REPO}/collector/scripts/run-systemd.sh
+TimeoutStartSec=12h
+Nice=10
+UMask=0022

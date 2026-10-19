@@ -13,8 +13,15 @@ elif (( $# != 0 )); then
 fi
 cd "$collector_dir"
 
-name="SMDB_$(date +"%Y%m%d_%H%M%S")"
 mkdir -p tmpdir smdb controls
+# Prevent a manual run and the timer from refreshing this collector together.
+exec 9>tmpdir/collector.lock
+if ! flock --nonblock 9; then
+  echo "Another collector refresh is running; skipping this run."
+  exit 0
+fi
+
+name="SMDB_$(date +"%Y%m%d_%H%M%S")"
 tmp_dir=$(mktemp -d tmpdir/smdb.XXXXXX)
 trap 'rm -rf -- "$tmp_dir"' EXIT
 curl --fail --location --output "$tmp_dir/${name}.zip" --data 'checkbox_smdb=on' http://dandyweb01fl.unicph.domain:5100/download_merged_standardized
