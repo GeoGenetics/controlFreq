@@ -19,6 +19,8 @@ import WarningExplorer from "./WarningExplorer.jsx"
 import WikiTaxonTooltip from "./WikiTaxonTooltip.jsx"
 import { CooccurrenceExplorer, DamageExplorer, LibraryComparison, PrevalenceExplorer, RunQcExplorer, TaxonExplorer } from "./AdvancedViews.jsx"
 
+const dataBaseUrl = `${(import.meta.env.VITE_DATA_URL || import.meta.env.BASE_URL).replace(/\/$/, '')}/`
+
 const COLORS = {
   Bacteria: '#24c18a', Microbe: '#24c18a', Archaea: '#38a7c7', Plant: '#9ad55c', Animal: '#f2b84b',
   'Other Eukaryote': '#b08cff',
@@ -97,7 +99,7 @@ function App() {
   const [recentComparisonMonth, setRecentComparisonMonth] = useState("")
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}dashboard-data.json`, { cache: "no-store" })
+    fetch(`${dataBaseUrl}dashboard-data.json`, { cache: "no-store" })
       .then((response) => { if (!response.ok) throw new Error('No generated data'); return response.json() })
       .then(setData).catch(() => {})
   }, [])
@@ -108,8 +110,8 @@ function App() {
     let cancelled = false
     setLoadingRank(rank)
     Promise.all([
-      fetch(import.meta.env.BASE_URL + files.taxa, { cache: 'no-store' }),
-      fetch(import.meta.env.BASE_URL + files.libraries, { cache: 'no-store' }),
+      fetch(dataBaseUrl + files.taxa, { cache: 'no-store' }),
+      fetch(dataBaseUrl + files.libraries, { cache: 'no-store' }),
     ]).then(async (responses) => {
       if (responses.some((response) => !response.ok)) throw new Error('Rank data unavailable')
       return Promise.all(responses.map((response) => response.json()))

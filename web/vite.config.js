@@ -22,7 +22,7 @@ function readChangeLog() {
 
 export default defineConfig({
   plugins: [react()],
-  base: '/controlFreq/',
+  base: process.env.BASE_PATH || '/',
   define: {
     __APP_CHANGE_LOG__: JSON.stringify(readChangeLog()),
   },

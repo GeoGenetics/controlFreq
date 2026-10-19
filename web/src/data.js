@@ -1,6 +1,6 @@
 export const fallbackData = {
   generatedAt: '2026-06-19T10:54:13Z',
-  source: 'Example data · run scripts/build_dashboard_data.py for current results',
+  source: 'Example data · refresh the collector output for current results',
   records: [
     { month: '2025-09', controlType: 'Extraction Negative', kingdom: 'Bacteria', pipeline: 'PREFILTER', reads: 28400, libraries: 12 },
     { month: '2025-09', controlType: 'Extraction Negative', kingdom: 'Plant', pipeline: 'EUKARYOTE', reads: 6200, libraries: 12 },

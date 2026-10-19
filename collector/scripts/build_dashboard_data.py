@@ -73,7 +73,7 @@ def compact_lineage(path, kingdom, taxon):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=Path)
-    parser.add_argument("--output", type=Path, default=Path("public/dashboard-data.json"))
+    parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[1] / "output/dashboard-data.json")
     args = parser.parse_args()
 
     reads_by_group = defaultdict(int)

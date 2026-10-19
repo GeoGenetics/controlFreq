@@ -74,13 +74,14 @@ all analysis tabs where taxon-level A values can meaningfully restrict results.
 
 ## Refresh and run locally
 
-See [README.md](README.md#refresh-data) for the full maintenance workflow, including `bash scripts/main.sh --push`, validation, and deployment. The pipeline builds all 11 `public/dashboard-data*.json` files; each selected rank loads its own taxa and library files.
+See [collector/README.md](collector/README.md) for data refresh and publication, and [web/README.md](web/README.md) for web development and deployment. The pipeline publishes all 11 `dashboard-data*.json` files; each selected rank loads its own taxa and library files.
 
 For local dashboard development:
 
 ```bash
-npm install
+cd web
+npm ci
 npm run dev
 ```
 
-Use `npm run build` to create a production bundle in `dist/`.
+Use `npm run build` to create a production bundle in `web/dist/`.

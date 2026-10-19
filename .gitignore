@@ -6,3 +6,10 @@ reports/*
 node_modules/
 dist/
 .DS_Store
+
+collector/tmpdir/
+collector/smdb/
+collector/controls/
+collector/output/
+.env
+__pycache__/

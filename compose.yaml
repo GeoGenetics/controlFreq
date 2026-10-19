@@ -1,0 +1,14 @@
+services:
+  web:
+    build:
+      context: ./web
+    ports:
+      - "${CONTROLFREQ_BIND_ADDRESS:-127.0.0.1}:${CONTROLFREQ_PORT:-8080}:80"
+    volumes:
+      - type: bind
+        source: ${CONTROLFREQ_DATA_DIR:?Set CONTROLFREQ_DATA_DIR to the absolute JSON output directory}
+        target: /srv/controlfreq/data
+        read_only: true
+        bind:
+          create_host_path: false
+    restart: unless-stopped
