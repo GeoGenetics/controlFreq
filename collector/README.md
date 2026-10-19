@@ -22,6 +22,13 @@ against the caller's directory. Raw SMDB TSVs, control TSVs, and temporary files
 stay in `collector/smdb/`, `collector/controls/`, and `collector/tmpdir/`.
 These directories and `collector/output/` are ignored by Git.
 
+After successful JSON publication, the refresh deletes older generated
+`control_YYYYMMDD_HHMMSS.tsv` files from this collector's `controls/` directory.
+It keeps the TSV used for the successful publication. Cleanup does not run if
+collection or publication fails. Files newer than the successful TSV, symlinks,
+subdirectories, and differently named files are left alone. The original
+checkout's `controls/` and the SMDB downloads are not cleaned by this policy.
+
 The default output is `collector/output/`. Each refresh creates a complete set
 of 11 JSON files in `output/releases/<unique-release>/`, validates their JSON,
 and atomically replaces the relative `output/current` symlink. A failed build
@@ -67,8 +74,10 @@ timer uses it. Data publication remains separate from transfer to a webserver.
 systemctl --user list-timers controlfreq-collector.timer
 systemctl --user status controlfreq-collector.service
 
-# Refresh now (waits for completion; use --no-block to return immediately):
-systemctl --user start controlfreq-collector.service
+# Refresh now in the background (also used by the daily timer):
+systemctl --user start --no-block controlfreq-collector.service
+# Or wait for completion:
+# systemctl --user start controlfreq-collector.service
 
 # Logs are also copied here because journal access is restricted on Dandy:
 tail -f collector/logs/collector.log

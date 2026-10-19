@@ -37,3 +37,6 @@ echo "SMDB downloaded: smdb/$name.tsv"
 Rscript scripts/getControls.R "$(realpath "smdb/$name.tsv")"
 control_tsv="controls/control_${name#SMDB_}.tsv"
 python3 scripts/publish_dashboard_data.py "$control_tsv" --output-dir "$output_dir"
+
+# Retain the successfully published source; failed refreshes never reach cleanup.
+python3 scripts/cleanup_controls.py "$control_tsv"
