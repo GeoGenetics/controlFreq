@@ -63,6 +63,12 @@ The development worktree is installed as a user service on
 runs are caught up when the timer next starts. User lingering is enabled on
 this host so the timer continues after logout.
 
+Run the systemd commands below as `dlm551` on **dandycomp07fl**. The installed
+service uses `/maps/projects/caeg/scratch/dlm551/controlFreq-container-deployment`
+(the `/projects/caeg/scratch/dlm551/controlFreq-container-deployment` path refers
+to the same worktree on this host). This is the collector deployment; the web
+container is deployed independently.
+
 The units are in `collector/systemd/`. The installed copies are under
 `~/.config/systemd/user/`; `~/.config/controlfreq/collector.env` selects the
 repository and output directory. It currently points to this development
@@ -71,8 +77,8 @@ timer uses it. Data publication remains separate from transfer to a webserver.
 
 ```bash
 # Check schedule and last/current refresh:
-systemctl --user list-timers controlfreq-collector.timer
-systemctl --user status controlfreq-collector.service
+systemctl --user list-timers controlfreq-collector.timer --no-pager
+systemctl --user status controlfreq-collector.service --no-pager
 
 # Refresh now in the background (also used by the daily timer):
 systemctl --user start --no-block controlfreq-collector.service
@@ -87,6 +93,38 @@ journalctl --user -u controlfreq-collector.service -n 100
 # Stop future scheduled refreshes (a running refresh is left to finish):
 systemctl --user disable --now controlfreq-collector.timer
 ```
+
+The service is a oneshot job: `inactive (dead)` is normal after completion.
+Confirm `status=0/SUCCESS` in its status and a `Published dashboard data:` line
+for the latest invocation in `collector/logs/collector.log`. Check
+`collector/output/current/dashboard-data.json` for the publication's UTC
+`generatedAt` timestamp. A scheduled trigger alone does not prove that fresh
+data was published, and failures do not send automatic notifications.
+
+For a foreground run with the same module setup and live output, from this
+worktree's root:
+
+```bash
+bash collector/scripts/run-systemd.sh
+```
+
+The lock skips this if a refresh is already running. Large TSVs and shared
+filesystem I/O can make a run take several minutes; inspect status and logs
+before restarting it.
+
+If `systemctl --user` reports `Unit controlfreq-collector.service could not be
+found` even though the files exist under `~/.config/systemd/user/`, reload and
+reactivate the installed timer on this host:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now controlfreq-collector.timer
+systemctl --user list-timers controlfreq-collector.timer --no-pager
+```
+
+This restored the installed units on 27 November 2026. The home directory is
+on NFS; availability during systemd startup is a suspected cause of the lost
+unit discovery after reboot, not a confirmed root cause or a permanent fix.
 
 The service explicitly initialises `/etc/profile.d/modules.sh`, then loads
 `gcc/11.2.0`, `R/4.3.3`, and `python/3.10.18`. It needs no interactive shell

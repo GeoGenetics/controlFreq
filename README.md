@@ -46,12 +46,31 @@ By default, the dashboard is available at `http://127.0.0.1:8080/`, suitable for
 placing behind the webserver's reverse proxy. Deployment details and direct
 network binding are in [web/README.md](web/README.md).
 
-## Refresh data on Dandy
+## Collector deployment on Dandy
+
+On this branch, the collector runs as a **systemd user service on
+`dandycomp07fl.unicph.domain`**, under the `dlm551` account. The
+`controlfreq-collector.timer` triggers `controlfreq-collector.service` daily
+at 03:00–03:10 Europe/Copenhagen. User lingering is enabled so it can run
+after logout. The service uses this worktree:
+`/maps/projects/caeg/scratch/dlm551/controlFreq-container-deployment`.
+
+Run these commands as `dlm551` on **dandycomp07fl**:
 
 ```bash
-module load gcc/11.2.0 R/4.3.3
-bash collector/scripts/main.sh
+# Check the next automatic run and the last/current refresh:
+systemctl --user list-timers controlfreq-collector.timer --no-pager
+systemctl --user status controlfreq-collector.service --no-pager
+
+# Start a refresh in the background:
+systemctl --user start --no-block controlfreq-collector.service
 ```
+
+A completed refresh normally leaves the service `inactive (dead)`; check for
+`status=0/SUCCESS` and a new publication message in
+`collector/logs/collector.log`. Failures do not send automatic notifications.
+See the [collector operations guide](collector/README.md#run-automatically-with-systemd-on-dandy)
+for logs, foreground runs, and recovery if systemd cannot find the units.
 
 The completed release is exposed at `collector/output/current/`. Point the
 container at the parent `collector/output/` directory if it is on the same
